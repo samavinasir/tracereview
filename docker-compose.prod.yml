@@ -1,0 +1,36 @@
+services:
+  db:
+    ports: !reset []
+
+  api:
+    ports: !reset []
+    environment:
+      CORS_ORIGINS: https://${UI_DOMAIN:?Set UI_DOMAIN in .env}
+
+  frontend:
+    ports: !reset []
+    build:
+      args:
+        VITE_API_BASE_URL: https://${API_DOMAIN:?Set API_DOMAIN in .env}
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      UI_DOMAIN: ${UI_DOMAIN:?Set UI_DOMAIN in .env}
+      API_DOMAIN: ${API_DOMAIN:?Set API_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - frontend
+
+volumes:
+  caddy_data:
+  caddy_config:

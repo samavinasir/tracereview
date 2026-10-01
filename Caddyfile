@@ -1,0 +1,9 @@
+{$UI_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy frontend:80
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:8000
+}
