@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from .config import settings
@@ -88,6 +88,26 @@ async def initialize_storage() -> None:
         await connection.execute(text("ALTER TABLE verification_results ALTER COLUMN confidence DROP NOT NULL"))
         await connection.execute(text("UPDATE claims SET confidence = NULL WHERE confidence IS NOT NULL"))
         await connection.execute(text("UPDATE verification_results SET confidence = NULL WHERE confidence IS NOT NULL"))
+
+
+INTERRUPTED_RUN_ERROR = "This run was interrupted because the API restarted before it finished. Please start it again."
+
+
+async def fail_interrupted_runs() -> int:
+    """Mark runs left queued/running by a previous process as failed.
+
+    Workflows run as in-process background tasks, so a restart or deploy kills them
+    without any final status update and the UI would poll forever. Call this once at
+    startup. It assumes a single API process (as documented in the README); with
+    several replicas it would also fail runs that another replica is still working on.
+    """
+    async with Session.begin() as session:
+        result = await session.execute(
+            update(ResearchRun)
+            .where(ResearchRun.status.in_(("queued", "running")))
+            .values(status="failed", error=INTERRUPTED_RUN_ERROR)
+        )
+        return int(result.rowcount or 0)  # type: ignore[attr-defined]
 
 
 async def get_cached_paper_digests(cache_keys: list[str]) -> dict[str, dict]:

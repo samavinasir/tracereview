@@ -6,6 +6,9 @@ services:
     ports: !reset []
     environment:
       CORS_ORIGINS: https://${UI_DOMAIN:?Set UI_DOMAIN in .env}
+      # Safe here because the API port is not published; only Caddy can reach it.
+      # Lets uvicorn read the real client IP from X-Forwarded-For for rate limiting.
+      FORWARDED_ALLOW_IPS: "*"
 
   frontend:
     ports: !reset []

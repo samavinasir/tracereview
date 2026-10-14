@@ -71,3 +71,44 @@ async def test_workflow_marks_run_started_before_first_graph_node(monkeypatch: p
 
     assert statuses == ["running", "running", "completed"]
     assert snapshots[0]["audit_log"][0].action == "workflow_started"
+
+
+def test_rate_limit_state_prunes_expired_clients_but_keeps_active_ones() -> None:
+    from collections import deque
+
+    api._request_times.clear()
+    api._last_rate_limit_prune = 0.0
+    api._request_times["expired"] = deque([10.0, 20.0])
+    api._request_times["empty"] = deque()
+    api._request_times["active"] = deque([95.0])
+
+    api._prune_rate_limit_state(now=100.0, window=60.0)
+
+    assert set(api._request_times) == {"active"}
+    # A second call inside the same window does nothing (amortized sweep).
+    api._request_times["late"] = deque([1.0])
+    api._prune_rate_limit_state(now=110.0, window=60.0)
+    assert "late" in api._request_times
+    api._request_times.clear()
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_is_tracked_per_client_address(monkeypatch: pytest.MonkeyPatch) -> None:
+    api._request_times.clear()
+    old_limit = api.settings.research_rate_limit_requests
+    api.settings.research_rate_limit_requests = 1
+    monkeypatch.setattr(api, "create_research", AsyncMock(return_value=UUID("dddddddd-dddd-4ddd-8ddd-dddddddddddd")))
+    monkeypatch.setattr(api, "_run_workflow", AsyncMock())
+    body = {"question": "What evidence supports this mechanism?"}
+    try:
+        async def post_from(host: str) -> int:
+            transport = httpx.ASGITransport(app=api.app, client=(host, 5000))
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+                return (await client.post("/research", json=body)).status_code
+
+        assert await post_from("203.0.113.1") == 202
+        assert await post_from("203.0.113.2") == 202  # different user, own budget
+        assert await post_from("203.0.113.1") == 429  # first user is now limited
+    finally:
+        api.settings.research_rate_limit_requests = old_limit
+        api._request_times.clear()

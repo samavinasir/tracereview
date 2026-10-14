@@ -122,6 +122,10 @@ The frontend dev server runs at [http://localhost:5173](http://localhost:5173). 
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
+Rate limiting is per client IP. `docker-compose.prod.yml` sets `FORWARDED_ALLOW_IPS=*` for the API so uvicorn reads the real client address from Caddy's `X-Forwarded-For` header; this is safe only because the API port is not published and Caddy is the sole entry point. If you expose the API directly, remove that setting or the header could be spoofed.
+
+Research runs execute inside the API process. If the API restarts mid-run, the run cannot continue, so on startup any run still marked `queued` or `running` is marked `failed` with an explanatory message, and you can simply start it again.
+
 The initial deployment targets one API container. Background research work and rate limits are process-local, so use a durable job queue and a shared limiter before scaling to multiple API replicas. Back up the PostgreSQL volume before upgrades and migrations.
 
 ## License

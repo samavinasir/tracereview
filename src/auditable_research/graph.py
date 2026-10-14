@@ -45,6 +45,7 @@ from .models import (
 )
 from .state import ResearchState
 from .storage import get_cached_paper_digests, store_cached_paper_digests
+from .text_utils import split_sentences
 from .tools import (
     CrossrefTool,
     EuropePMCTool,
@@ -177,11 +178,23 @@ def _paper_digest_cache_entry(source: SourceRecord, research_question: str, dige
 
 def _abstract_last_sentence(abstract: str) -> str:
     """Return the final abstract sentence as supplied, without model rewriting."""
-    sentences = re.findall(r"[^.!?]+(?:[.!?]+[\"'’”)]*)?", abstract.strip())
-    return next((item.strip() for item in reversed(sentences) if item.strip()), "")
+    sentences = split_sentences(abstract)
+    return sentences[-1] if sentences else ""
 
 
-_EDITORIAL_RELEVANCE = re.compile(r"(?i)demonstrat|show[s]?\b|prov|confirm|confer|independen|caus")
+# Whole-word matches only. The old substring pattern ("prov", "caus", ...) also
+# hit harmless words such as "improved", "approved" and "because".
+_EDITORIAL_RELEVANCE = re.compile(
+    r"(?i)\b(?:"
+    r"demonstrat(?:e|es|ed|ing)"
+    r"|show(?:s|ed|n|ing)?"
+    r"|prov(?:e|es|ed|en|ing)"
+    r"|confirm(?:s|ed|ing)?"
+    r"|confer(?:s|red|ring)?"
+    r"|independent(?:ly)?"
+    r"|caus(?:e|es|ed|ing|al|ally|ation)"
+    r")\b"
+)
 
 
 def _safe_relevance_note(note: str, source: SourceRecord, question: str) -> str:
@@ -193,9 +206,7 @@ def _safe_relevance_note(note: str, source: SourceRecord, question: str) -> str:
 
 
 def _fallback_abstract_quotes(abstract: str, question: str) -> list[PaperQuote]:
-    sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", abstract.strip()) if part.strip()]
-    if len(sentences) <= 1 and abstract.strip():
-        sentences = [abstract.strip()]
+    sentences = split_sentences(abstract)
     terms = _tokens(question)
     ranked = sorted(enumerate(sentences), key=lambda item: (-len(terms & _tokens(item[1])), item[0]))
     chosen = sorted((index, sentence) for index, sentence in ranked[:2])

@@ -18,6 +18,7 @@ from .state import ResearchState
 from .storage import (
     create_research,
     engine,
+    fail_interrupted_runs,
     get_audit,
     get_claims,
     get_evidence,
@@ -33,6 +34,7 @@ from .storage import (
 logger = logging.getLogger(__name__)
 _request_times: dict[str, deque[float]] = defaultdict(deque)
 _rate_limit_lock = asyncio.Lock()
+_last_rate_limit_prune = 0.0
 _SECRET_PATTERNS = (
     (re.compile(r"(?i)\bBearer\s+[^\s,;]+"), "Bearer [REDACTED]"),
     (re.compile(r"\b(?:gsk_|sk-)[A-Za-z0-9_-]{10,}\b"), "[REDACTED_SECRET]"),
@@ -48,13 +50,30 @@ def _sanitize_error(error: Exception) -> str:
     return detail[:500]
 
 
+def _prune_rate_limit_state(now: float, window: float) -> None:
+    """Drop clients whose attempts have all expired so the dict cannot grow forever.
+
+    Runs at most once per window, so the sweep cost is amortized across requests.
+    """
+    global _last_rate_limit_prune
+    if now - _last_rate_limit_prune < window:
+        return
+    _last_rate_limit_prune = now
+    for client_id in [cid for cid, attempts in _request_times.items() if not attempts or now - attempts[-1] >= window]:
+        del _request_times[client_id]
+
+
 async def _limit_research_requests(request: Request) -> None:
     # This per-process limiter is suitable for the single-container starter stack.
     # Use a shared store such as Redis when deploying multiple API workers/replicas.
+    # Behind a reverse proxy, request.client.host is the real client only if uvicorn
+    # trusts the proxy's X-Forwarded-For header (see FORWARDED_ALLOW_IPS in
+    # docker-compose.prod.yml); otherwise every user shares the proxy's address.
     client_id = request.client.host if request.client else "unknown"
     now = time.monotonic()
     window = settings.research_rate_limit_window_seconds
     async with _rate_limit_lock:
+        _prune_rate_limit_state(now, window)
         attempts = _request_times[client_id]
         while attempts and now - attempts[0] >= window:
             attempts.popleft()
@@ -84,6 +103,9 @@ class ResearchRequest(BaseModel):
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await initialize_storage()
+    interrupted = await fail_interrupted_runs()
+    if interrupted:
+        logger.warning("Marked %d interrupted research run(s) as failed after restart", interrupted)
     yield
     await engine.dispose()
 
