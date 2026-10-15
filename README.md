@@ -72,56 +72,7 @@ This is the single biggest credibility boost for the page.
 <br />
 
 <a name="tech-stack"></a>
-<img src="assets/banners/04-tech-stack.svg" alt="04 / Tech stack" width="100%" />
-
-<table>
-<tr>
-<td width="33%" valign="top">
-
-**🖥️&nbsp; Frontend**
-
-React · TypeScript · Vite
-
-</td>
-<td width="33%" valign="top">
-
-**⚙️&nbsp; Backend**
-
-Python · FastAPI · Pydantic
-
-</td>
-<td width="33%" valign="top">
-
-**🤖&nbsp; AI workflow**
-
-LangGraph · LangChain · Groq
-
-</td>
-</tr>
-<tr>
-<td width="33%" valign="top">
-
-**🗄️&nbsp; Database**
-
-PostgreSQL · SQLAlchemy · pgvector
-
-</td>
-<td width="33%" valign="top">
-
-**🐳&nbsp; Deployment**
-
-Docker Compose · optional Caddy
-
-</td>
-<td width="33%" valign="top">
-
-**✅&nbsp; Quality**
-
-Ruff · mypy · pytest · GitHub Actions
-
-</td>
-</tr>
-</table>
+<img src="assets/tech-stack.svg" alt="04 / Tech stack" width="100%" />
 
 <br />
 
