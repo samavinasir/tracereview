@@ -104,39 +104,6 @@ Inspect retrieval, selection, caching, validation, and model-fallback events.
 <a name="workflow"></a>
 <img src="assets/workflow.svg" alt="03 / Workflow" width="100%" />
 
-<table>
-<tr>
-<td width="25%" valign="top">
-
-**1 · Search**
-
-Query configured providers and collect candidate papers.
-
-</td>
-<td width="25%" valign="top">
-
-**2 · Rank**
-
-Deduplicate records, then rank them (lexical and deterministic).
-
-</td>
-<td width="25%" valign="top">
-
-**3 · Digest**
-
-Generate concise summaries and neutral relevance notes.
-
-</td>
-<td width="25%" valign="top">
-
-**4 · Verify**
-
-Check quotes against source text; fall back to verbatim abstract sentences.
-
-</td>
-</tr>
-</table>
-
 <sub>The audit trail covers retrieval, selection, caching, validation, and model-fallback events.</sub>
 
 <br />
