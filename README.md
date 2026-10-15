@@ -23,7 +23,8 @@
 
 **Discover scientific papers. Inspect source-matched excerpts.**
 <br />
-**Keep the research workflow auditable.**
+**Keep the research 
+ auditable.**
 
 <br />
 
@@ -101,7 +102,7 @@ Inspect retrieval, selection, caching, validation, and model-fallback events.
 <br />
 
 <a name="workflow"></a>
-<img src="assets/banners/03-how-it-works.svg" alt="03 / Workflow" width="100%" />
+<img src="assets/workflow.svg" alt="03 / Workflow" width="100%" />
 
 From question to report in four steps. Everything inside the highlighted band is written to the audit trail.
 
