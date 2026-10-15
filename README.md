@@ -72,6 +72,9 @@ This is the single biggest credibility boost for the page.
 <br />
 
 <a name="tech-stack"></a>
+<img src="assets/banners/04-tech-stack.svg" alt="04 / Tech stack" width="100%" />
+
+<a name="tech-stack"></a>
 <img src="assets/tech-stack.svg" alt="04 / Tech stack" width="100%" />
 
 <br />
