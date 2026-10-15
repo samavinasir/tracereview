@@ -104,28 +104,6 @@ Inspect retrieval, selection, caching, validation, and model-fallback events.
 <a name="workflow"></a>
 <img src="assets/workflow.svg" alt="03 / Workflow" width="100%" />
 
-From question to report in four steps. Everything inside the highlighted band is written to the audit trail.
-
-```mermaid
-flowchart LR
-    Q([Research<br/>question]) --> S
-
-    subgraph AUDIT["Audit trail: every step is logged"]
-        direction LR
-        S[1 · Search] --> R[2 · Rank] --> D[3 · Digest] --> V[4 · Verify]
-    end
-
-    V --> O([Paper cards<br/>& report])
-
-    classDef io fill:#172b45,color:#ffffff,stroke:#20b8aa,stroke-width:2px
-    classDef step fill:#ffffff,color:#172b45,stroke:#20b8aa,stroke-width:2px
-    classDef out fill:#d5f7ef,color:#123d3a,stroke:#20b8aa,stroke-width:2px
-    class Q io
-    class S,R,D,V step
-    class O out
-    style AUDIT fill:#e6edf5,color:#24394b,stroke:#8ba2bd,stroke-dasharray:5 5
-```
-
 <table>
 <tr>
 <td width="25%" valign="top">
