@@ -104,8 +104,6 @@ Inspect retrieval, selection, caching, validation, and model-fallback events.
 <a name="workflow"></a>
 <img src="assets/workflow.svg" alt="03 / Workflow" width="100%" />
 
-<sub>The audit trail covers retrieval, selection, caching, validation, and model-fallback events.</sub>
-
 <br />
 
 <a name="tech-stack"></a>
