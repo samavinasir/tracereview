@@ -62,42 +62,7 @@ This is the single biggest credibility boost for the page.
 -->
 
 <a name="features"></a>
-<img src="assets/banners/02-features.svg" alt="02 / Features" width="100%" />
-
-<table>
-<tr>
-<td width="50%" valign="top">
-
-#### 🔎&nbsp; Literature discovery
-
-Search scientific literature across configured providers and deduplicate records.
-
-</td>
-<td width="50%" valign="top">
-
-#### 🧠&nbsp; AI-assisted reading
-
-Generate concise study summaries and neutral relevance notes.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-#### 🔗&nbsp; Traceable excerpts
-
-Check proposed quotations against source text and fall back to verbatim abstract sentences when needed.
-
-</td>
-<td width="50%" valign="top">
-
-#### 📋&nbsp; Auditable workflows
-
-Inspect retrieval, selection, caching, validation, and model-fallback events.
-
-</td>
-</tr>
-</table>
+<img src="assets/features.svg" alt="02 / Features" width="100%" />
 
 <br />
 
