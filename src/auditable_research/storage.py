@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import delete, func, select, text, update
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from .config import settings
@@ -28,7 +29,20 @@ from .db_models import (
     VerificationResult,
 )
 
-engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+database_url = make_url(settings.database_url)
+if database_url.drivername == "postgresql":
+    database_url = database_url.set(drivername="postgresql+asyncpg")
+
+# Hosted PostgreSQL connection strings commonly use libpq's `sslmode` query
+# option. asyncpg calls that option `ssl`, so translate it before SQLAlchemy
+# passes the URL through to the driver.
+database_query = dict(database_url.query)
+sslmode = database_query.pop("sslmode", None)
+if sslmode is not None:
+    database_query.setdefault("ssl", sslmode)
+    database_url = database_url.set(query=database_query)
+
+engine = create_async_engine(database_url, pool_pre_ping=True)
 Session = async_sessionmaker(engine, expire_on_commit=False)
 
 
