@@ -8,6 +8,7 @@ from langchain_groq import ChatGroq
 from pydantic import BaseModel, Field
 
 from .config import settings
+from .provider_credentials import provider_api_key
 from .models import ClaimVerification, EvidenceItem, ResearchPlan, SearchQuery, SourceRecord
 
 T = TypeVar("T", bound=BaseModel)
@@ -91,7 +92,7 @@ class PaperDigestDraft(BaseModel):
     what_study_did: str = Field(max_length=1200)
     key_findings: list[str] = Field(default_factory=list, max_length=5)
     why_it_matches: str = Field(max_length=500)
-    study_type: Literal["experimental", "clinical_observational", "computational", "review", "systematic_review_meta_analysis", "case_report", "other", "unclear"]
+    study_type: str = Field(default="unclear", max_length=80)
 
 
 class PaperDigestOutput(BaseModel):
@@ -121,7 +122,7 @@ def _coerce_paper_digest_output(content: str) -> PaperDigestOutput:
     else:
         raw_papers = []
 
-    allowed_types = {"experimental", "clinical_observational", "computational", "review", "systematic_review_meta_analysis", "case_report", "other", "unclear"}
+    allowed_types = {"experimental", "observational", "computational", "review", "systematic_review_meta_analysis", "case_study", "qualitative", "other", "unclear", "clinical_observational", "case_report"}
     normalized: list[dict[str, Any]] = []
     for item in raw_papers if isinstance(raw_papers, list) else []:
         if not isinstance(item, dict):
@@ -144,13 +145,15 @@ def _coerce_paper_digest_output(content: str) -> PaperDigestOutput:
         if kind not in allowed_types:
             if any(term in kind for term in ("review", "meta_analysis", "systematic")):
                 kind = "systematic_review_meta_analysis" if any(term in kind for term in ("meta_analysis", "systematic")) else "review"
-            elif any(term in kind for term in ("clinical", "cohort", "case_control", "cross_sectional")):
-                kind = "clinical_observational"
-            elif any(term in kind for term in ("computational", "bioinformatic", "in_silico", "genomic")):
+            elif any(term in kind for term in ("observational", "cohort", "case_control", "cross_sectional")):
+                kind = "observational"
+            elif any(term in kind for term in ("computational", "bioinformatic", "in_silico")):
                 kind = "computational"
+            elif "qualitative" in kind:
+                kind = "qualitative"
             elif "case" in kind:
-                kind = "case_report"
-            elif any(term in kind for term in ("in_vitro", "in_vivo", "experimental", "laboratory", "knockout", "assay")):
+                kind = "case_study"
+            elif any(term in kind for term in ("experimental", "laboratory", "assay")):
                 kind = "experimental"
             elif kind in {"", "none", "null"}:
                 kind = "unclear"
@@ -203,10 +206,11 @@ class GroqRateLimited(RuntimeError):
 def _structured_model(
     schema: type[BaseModel], model_name: str | None = None, max_completion_tokens: int | None = None
 ) -> Any:
-    if not settings.groq_api_key:
+    groq_api_key = provider_api_key("groq_api_key")
+    if not groq_api_key:
         raise RuntimeError("GROQ_API_KEY is required to run the research workflow")
     model = ChatGroq(  # type: ignore[call-arg]
-        api_key=settings.groq_api_key,
+        api_key=groq_api_key,
         model=model_name or settings.groq_model,
         temperature=0,
         max_tokens=max_completion_tokens or settings.groq_max_completion_tokens,
@@ -298,7 +302,8 @@ async def invoke_openrouter_structured(
     schema: type[T], messages: list[tuple[str, str]], model_name: str | None = None
 ) -> tuple[T, dict]:
     """One bounded OpenRouter call used only as an independent digest fallback."""
-    if not settings.openrouter_api_key:
+    openrouter_api_key = provider_api_key("openrouter_api_key")
+    if not openrouter_api_key:
         raise RuntimeError("OpenRouter fallback is not configured")
     payload = {
         "model": model_name or settings.openrouter_fallback_model,
@@ -309,7 +314,7 @@ async def invoke_openrouter_structured(
     async with httpx.AsyncClient(timeout=settings.request_timeout_seconds) as client:
         response = await client.post(
             "https://openrouter.ai/api/v1/chat/completions",
-            headers={"Authorization": f"Bearer {settings.openrouter_api_key}", "Content-Type": "application/json"},
+            headers={"Authorization": f"Bearer {openrouter_api_key}", "Content-Type": "application/json"},
             json=payload,
         )
         response.raise_for_status()

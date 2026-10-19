@@ -9,6 +9,7 @@ from defusedxml import ElementTree as ET
 
 from ..config import settings
 from ..models import SearchQuery, SourceRecord, SourceSection
+from ..provider_credentials import provider_api_key
 from .base import ResearchTool
 
 
@@ -67,8 +68,9 @@ class PubMedTool(HttpResearchTool):
         result = {**params, "tool": "TraceReview"}
         if settings.contact_email:
             result["email"] = settings.contact_email
-        if settings.ncbi_api_key:
-            result["api_key"] = settings.ncbi_api_key
+        ncbi_api_key = provider_api_key("ncbi_api_key")
+        if ncbi_api_key:
+            result["api_key"] = ncbi_api_key
         return result
 
     async def _get_ncbi(self, url: str, params: dict[str, Any]) -> dict:
@@ -148,9 +150,9 @@ class EuropePMCTool(HttpResearchTool):
             if tag == "sec":
                 own_title = next((" ".join("".join(child.itertext()).split()) for child in element if child.tag.rsplit("}", 1)[-1].casefold() == "title"), "")
                 heading = own_title.casefold()
-                if any(word in heading for word in ("method", "material", "experiment", "strain", "construct")):
+                if any(word in heading for word in ("method", "material", "experiment")):
                     part = "methods"
-                elif any(word in heading for word in ("result", "phenotype", "susceptibility", "antimicrobial activity")):
+                elif "result" in heading:
                     part = "results"
                 title = own_title or title
             if tag == "p" and part in {"methods", "results"}:
@@ -218,7 +220,8 @@ class SemanticScholarTool(HttpResearchTool):
     name = "semantic_scholar"
 
     async def search(self, query: SearchQuery, limit: int) -> list[SourceRecord]:
-        headers = {"x-api-key": settings.semantic_scholar_api_key} if settings.semantic_scholar_api_key else None
+        semantic_scholar_api_key = provider_api_key("semantic_scholar_api_key")
+        headers = {"x-api-key": semantic_scholar_api_key} if semantic_scholar_api_key else None
         payload = await self.get(
             "https://api.semanticscholar.org/graph/v1/paper/search",
             {"query": query.query, "limit": min(limit, 100), "fields": "paperId,title,year,abstract,authors,externalIds,openAccessPdf"},

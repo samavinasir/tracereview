@@ -1,186 +1,123 @@
-<div align="center">
+# TraceReview
 
-<img src="assets/tracereview-hero.svg" alt="TraceReview: literature review you can trace" width="100%" />
+**Literature review you can trace**
 
-<br />
-<br />
+TraceReview helps researchers find a focused set of papers and read what each source says. Enter a research question to retrieve and rank records, then review paper cards with bibliographic details, a short AI-generated study summary, checked verbatim excerpts, and the abstract's final sentence copied from the source record. TraceReview does not decide whether a paper's conclusions are true and does not produce scientific verdicts.
 
-<img src="https://img.shields.io/badge/Status-Active%20Development-20b8aa?style=flat-square" alt="Active development" />
-<img src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python" />
-<img src="https://img.shields.io/badge/React-19-149ECA?style=flat-square&logo=react&logoColor=white" alt="React 19" />
-<img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI" />
-<img src="https://img.shields.io/badge/LangGraph-1C3C3C?style=flat-square&logo=langchain&logoColor=white" alt="LangGraph" />
-<img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker" />
-<!-- Add once a LICENSE file exists (adjust the license name):
-<img src="https://img.shields.io/badge/License-MIT-20b8aa?style=flat-square" alt="License" />
--->
-<!-- CI badge: confirm the workflow filename in .github/workflows/ first
-<a href="https://github.com/samavinasir/tracereview/actions"><img src="https://github.com/samavinasir/tracereview/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
--->
+## Features
 
-<br />
-<br />
+- Searches PubMed and Europe PMC by default, with optional OpenAlex, Semantic Scholar, and Crossref adapters. Crossref is available but is not used by default.
+- Deduplicates records using PMID, DOI, or normalized title, keeps the record with the more complete abstract, and retains alternate provider links.
+- Filters theses and dissertations and short abstracts before ranking. The default run cap is 10 unique records and the UI shows up to 10 paper cards.
+- Produces a concise reading aid for each selected record: what the study did, a neutral retrieval note, up to two source-matched key-finding excerpts, and the abstract's final sentence copied in code.
+- Cleans HTML/XML markup before displaying source text and validating quotes. If model-proposed quotes do not match, it selects relevant abstract sentences verbatim.
+- Caches successful paper digests in PostgreSQL so repeated questions can reuse work when the paper text, question, and prompt version match.
+- Shows selection, provider, cache, quote-validation, and model-fallback events in an inspectable audit trail.
+- Ranks records by overlap with the words in the research question, and records why an item was selected or excluded.
+- Offers discipline and review-goal options, year/source/full-text filters, and a paper-first screening view with saved include/exclude decisions and reviewer notes.
+- Shows source-linked evidence excerpts alongside the paper and exports a Markdown digest.
+- Separates the spacious new-search home, research Results workspace, and live Run details page. Results is the default view for completed runs, Papers contains the detailed paper list, and run progress, search plan, and audit details have their own page. Export remains available from the research workspace.
 
-**Discover scientific papers. Inspect source-matched excerpts.**
-<br />
-**Keep the research 
- auditable.**
+AI summaries and retrieval notes are reading aids and may miss nuance. Read the linked paper and decide what the findings mean.
 
-<br />
+## Tech stack
 
-[![Features](https://img.shields.io/badge/Features-172b45?style=for-the-badge)](#features)
-[![Workflow](https://img.shields.io/badge/Workflow-172b45?style=for-the-badge)](#workflow)
-[![Quick start](https://img.shields.io/badge/Quick%20start-172b45?style=for-the-badge)](#quick-start)
-[![Configuration](https://img.shields.io/badge/Configuration-172b45?style=for-the-badge)](#configuration)
-[![Roadmap](https://img.shields.io/badge/Roadmap-172b45?style=for-the-badge)](#roadmap)
+| Area | Technology |
+| --- | --- |
+| Web app | Django 5, server-rendered HTML templates, CSS, browser JavaScript |
+| Existing API compatibility | FastAPI, Pydantic Settings, Uvicorn |
+| Workflow | LangGraph; LangChain's Groq integration for model access |
+| Language models | Groq GPT-OSS by default; optional OpenRouter free-router fallback |
+| Research sources | PubMed/NCBI, Europe PMC, OpenAlex, Semantic Scholar, Crossref; UniProt adapter available |
+| Database | PostgreSQL 16, SQLAlchemy asyncio, asyncpg |
+| CI | GitHub Actions for lint, typing, and tests |
 
-</div>
+The current ranking is deterministic lexical ranking.
 
-<br />
+## Run locally
 
-<a name="why"></a>
-<img src="assets/banners/01-why-tracereview.svg" alt="01 / Overview" width="100%" />
+1. Copy `.env.example` to `.env`.
+2. Set a local `DATABASE_URL`, `DJANGO_SECRET_KEY`, and `USER_KEYS_ENCRYPTION_KEY`. Users add their own provider keys after creating an account.
+3. Install PostgreSQL 16 and create a database that matches `DATABASE_URL`.
+4. Start the Django app as described under [Local development](#local-development).
+5. Open the search home at [http://127.0.0.1:8000](http://127.0.0.1:8000). Each research run opens a dedicated Results page; use Run details for its live plan and audit trace. The health check is [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health); legacy FastAPI API documentation remains at `/docs` when running that compatibility server.
 
-> AI-generated literature summaries are useful, but researchers need to inspect the sources behind them.
+## Configuration
 
-TraceReview combines **literature discovery**, **AI-assisted reading**, **source-matched excerpts**, and **workflow auditing** in one application, so every claim can be followed back to the paper it came from.
+Application configuration is read from environment variables (normally in `.env`). `.env` is excluded from Git. Django users manage provider keys in their account settings; keys are encrypted at rest and are never written into research-run records. See `.env.example` for all settings, including:
 
-<br />
+- `GROQ_MODEL`, `GROQ_REASONING_EFFORT`, and `GROQ_TPM_BUDGET` for model behavior.
+- `USER_KEYS_ENCRYPTION_KEY` to encrypt provider API keys saved by individual accounts. Generate one with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. Keep this value private and stable: changing it makes existing saved keys unreadable.
+- The legacy FastAPI compatibility server can still use `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `NCBI_API_KEY`, `CONTACT_EMAIL`, and `SEMANTIC_SCHOLAR_API_KEY` from its environment; the Django interface uses the signed-in user's saved keys instead.
+- `MAX_RECORDS_PER_RESEARCH_RUN`, `MAX_PAPERS_PER_REVIEW`, `MIN_ABSTRACT_CHARS`, and `PAPER_DIGEST_BATCH_SIZE` for retrieval and review limits.
+- `DATABASE_URL` for local PostgreSQL access.
+- `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, and `DJANGO_ALLOWED_HOSTS` for Django. Set a private random secret and `DJANGO_DEBUG=false` in production.
 
-<!--
-## Screenshots
+Never commit `.env` or put provider credentials in screenshots, logs, or public issues. URL-encode special characters in passwords embedded in database URLs.
 
-Add a real UI screenshot or short GIF here: a search, a paper card, and the audit trail.
-This is the single biggest credibility boost for the page.
+## Research workflow
 
-<div align="center">
-<img src="assets/screenshot-search.png" alt="Search and paper cards" width="49%" />
-<img src="assets/screenshot-audit.png" alt="Audit trail view" width="49%" />
-</div>
+A run plans search queries, retrieves and deduplicates source records, selects a small paper set, digests selected papers in batches, and builds a compact list of authors' abstract conclusions. It can expand retrieval once when too few cards are available, but it does not broaden the search just because a model failed to summarize records. Successful summaries are cached; failed summaries remain visibly unreviewed and do not become scientific findings. Runs are marked complete when at least one paper card is ready and failed when there are no cards to show.
 
-<br />
--->
+Search requests use bounded concurrency; PubMed calls are paced separately. Groq digest calls use a process-local concurrency limit and token budget. Long provider cooldowns are not retried in a loop. If configured, OpenRouter is tried once as a fallback. If both providers fail, the run records the issue and continues to its final report with whatever cards are available.
 
-<a name="features"></a>
-<img src="assets/features.svg" alt="02 / Features" width="100%" />
+Retrieved titles, abstracts, and other provider fields are untrusted source data. They are displayed as text and are not treated as instructions.
 
-<br />
+## API overview
 
-<a name="workflow"></a>
-<img src="assets/workflow.svg" alt="03 / Workflow" width="100%" />
+- `GET /health` — API health.
+- `POST /research` — start a run; returns a run ID immediately.
+- `GET /research/{id}` and `GET /research/{id}/status` — run status and progress.
+- `GET /research/{id}/plan` — objective and search plan.
+- `GET /research/{id}/sources` — retrieved records and attached paper summaries.
+- `GET /research/{id}/report` — report JSON; use `?format=markdown` for a Markdown download.
+- `GET /research/{id}/audit` — structured workflow events and provider/model diagnostics.
 
-<br />
+Legacy evidence and claims endpoints remain for compatibility with older stored runs. New research runs use paper cards and do not generate or verify claims.
 
-<a name="tech-stack"></a>
-<img src="assets/banners/04-tech-stack.svg" alt="04 / Tech stack" width="100%" />
+## Local development
 
-<a name="tech-stack"></a>
-<img src="assets/tech-stack.svg" alt="04 / Tech stack" width="100%" />
+Install PostgreSQL 16, then create a database and user that match `DATABASE_URL` in `.env`:
 
-<br />
-
-<a name="quick-start"></a>
-<img src="assets/banners/05-quick-start.svg" alt="05 / Quick start" width="100%" />
-
-**Prerequisites:** [Docker](https://docs.docker.com/get-docker/) with Docker Compose, and a [Groq API key](https://console.groq.com/).
-
-**1. Clone the repository**
-
-```bash
-git clone https://github.com/samavinasir/tracereview.git
-cd tracereview
+```powershell
+psql -U postgres -c "CREATE USER research WITH PASSWORD 'change_me_url_encode_if_needed';"
+psql -U postgres -c "CREATE DATABASE research OWNER research;"
 ```
 
-**2. Configure the environment**
+Backend setup (PowerShell, from the repository root):
 
-Copy `.env.example` to `.env`, then set `GROQ_API_KEY` and your database password.
-
-```bash
-cp .env.example .env
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+python manage.py migrate
+python manage.py createsuperuser
 ```
 
-**3. Start everything**
+Create an account from the home page, then open **API keys** and save a Groq key (required to run research). OpenRouter, NCBI, and Semantic Scholar keys are optional. Each user's runs are private to that account.
 
-```bash
-docker compose up --build -d
+Run the Django ASGI web app (the persistent ASGI loop keeps background research tasks running):
+
+```powershell
+uvicorn tracereview_web.asgi:application --app-dir src --reload
 ```
 
-**4. Open the app**
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for the TraceReview interface or [http://127.0.0.1:8000/admin](http://127.0.0.1:8000/admin) for Django admin. Django serves the HTML, CSS, and browser JavaScript from one origin; no separate Vite server is needed.
 
-- 🌐&nbsp; **Web app:** http://localhost:5173
-- 📖&nbsp; **API docs:** http://localhost:8000/docs
-- 💚&nbsp; **Health check:** http://localhost:8000/health
+Existing SQLAlchemy tables and research history are retained. The Django admin initially exposes existing research runs as read-only records. The old FastAPI server remains available for compatibility while clients transition. For production, run `python manage.py collectstatic --noinput` during deployment; WhiteNoise serves the collected files.
 
-<br />
+The Django interface uses the built-in templates, CSS, and browser JavaScript; it does not require a separate frontend dev server.
 
-<a name="configuration"></a>
-<img src="assets/banners/06-configuration.svg" alt="06 / Configuration" width="100%" />
+## Production notes
 
-Settings live in `.env` (start from `.env.example`).
+Rate limiting is per client IP. Behind a reverse proxy, set `FORWARDED_ALLOW_IPS` so uvicorn reads the real client address from `X-Forwarded-For`. If you expose the API directly, leave that unset or the header could be spoofed.
 
-| Variable | Required | Purpose |
-|:--|:--:|:--|
-| `GROQ_API_KEY` | Yes | API key for the Groq-hosted models used for summaries and excerpt selection. |
-| *Database password* | Yes | Password for the PostgreSQL container. <!-- replace with the exact variable name from .env.example --> |
+Research runs execute inside the API process. If the API restarts mid-run, the run cannot continue, so on startup any run still marked `queued` or `running` is marked `failed` with an explanatory message, and you can simply start it again.
 
-<br />
+Background research work and rate limits are process-local, so use a durable job queue and a shared limiter before scaling to multiple web replicas. Back up PostgreSQL before upgrades and migrations. Django admin uses the PostgreSQL connection defined by `DATABASE_URL` and needs the standard `python manage.py migrate` setup for Django's own auth and session tables.
 
-<a name="development"></a>
-<img src="assets/banners/07-development.svg" alt="07 / Development" width="100%" />
+For a Vercel deployment, set `DATABASE_URL`, `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=false`, `DJANGO_ALLOWED_HOSTS`, `CORS_ORIGINS` (also used as trusted CSRF origins), and one stable `USER_KEYS_ENCRYPTION_KEY`. Do not add provider API keys as shared Vercel variables for the Django interface; each signed-in user saves their own keys under API keys. Vercel functions have a maximum execution duration, so move the current in-process `asyncio.create_task` workflow to a durable queue and worker before relying on long research runs in production.
 
-```bash
-# Lint and format check
-ruff check .
+## License
 
-# Type checking
-mypy src
-
-# Tests
-pytest
-```
-
-<!-- Add the frontend commands too, e.g. cd frontend && npm install && npm run dev -->
-
-For production, use `docker-compose.prod.yml` (with the optional Caddy reverse proxy).
-
-<br />
-
-<a name="important-notes"></a>
-<img src="assets/banners/08-important-notes.svg" alt="08 / Important notes" width="100%" />
-
-> [!WARNING]
-> TraceReview is under active development. Please keep these limitations in mind:
->
-> - Ranking is currently deterministic and lexical; embedding-based ranking is not implemented.
-> - Excerpt matching checks wording, not scientific truth.
-> - Research runs cannot resume after an API restart.
-
-<br />
-
-<a name="roadmap"></a>
-<img src="assets/banners/09-what-s-next.svg" alt="09 / Roadmap" width="100%" />
-
-- [ ] Embedding-based ranking (pgvector is already part of the stack)
-- [ ] Resumable research runs that survive an API restart
-- [ ] Exportable reports (Markdown / PDF)
-- [ ] Additional literature providers
-
-<br />
-
-<a name="license"></a>
-<img src="assets/banners/10-license.svg" alt="10 / License" width="100%" />
-
-<!-- Add a LICENSE file first (MIT or Apache-2.0 are common), then state it here. -->
-See [LICENSE](LICENSE) for details.
-
-<br />
-
----
-
-<div align="center">
-
-**Discover carefully. Read critically. Trace every excerpt.**
-
-<sub>Built for researchers who want more transparent literature workflows.</sub>
-
-</div>
+No license has been selected yet. Add a `LICENSE` file before describing this repository as open source or allowing reuse by others.

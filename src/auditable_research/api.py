@@ -64,11 +64,11 @@ def _prune_rate_limit_state(now: float, window: float) -> None:
 
 
 async def _limit_research_requests(request: Request) -> None:
-    # This per-process limiter is suitable for the single-container starter stack.
+    # This per-process limiter is suitable for a single API process.
     # Use a shared store such as Redis when deploying multiple API workers/replicas.
     # Behind a reverse proxy, request.client.host is the real client only if uvicorn
-    # trusts the proxy's X-Forwarded-For header (see FORWARDED_ALLOW_IPS in
-    # docker-compose.prod.yml); otherwise every user shares the proxy's address.
+    # trusts the proxy's X-Forwarded-For header (FORWARDED_ALLOW_IPS); otherwise
+    # every user shares the proxy's address.
     client_id = request.client.host if request.client else "unknown"
     now = time.monotonic()
     window = settings.research_rate_limit_window_seconds

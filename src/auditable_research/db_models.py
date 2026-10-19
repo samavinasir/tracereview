@@ -2,13 +2,11 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean,
     DateTime,
     Float,
     ForeignKey,
-    Index,
     Integer,
     Numeric,
     String,
@@ -108,7 +106,6 @@ class Document(Base):
     abstract: Mapped[str] = mapped_column(Text, nullable=False, default="")
     full_text_sections: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     content_hash: Mapped[str | None] = mapped_column(String(64), index=True)
-    embedding: Mapped[list[float] | None] = mapped_column(Vector(384))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
 
 
@@ -122,9 +119,6 @@ class PaperDigestCache(Base):
     prompt_version: Mapped[str] = mapped_column(String(40), nullable=False)
     digest_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
-
-
-Index("ix_documents_embedding_hnsw", Document.embedding, postgresql_using="hnsw", postgresql_ops={"embedding": "vector_cosine_ops"})
 
 
 class Evidence(Base):

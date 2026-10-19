@@ -309,8 +309,13 @@ async def test_planner_provider_failure_uses_multiple_focused_searches(monkeypat
     monkeypatch.setattr(graph, "invoke_openrouter_structured", unavailable)
     result = await graph.plan_research({"run_id": "fallback-plan", "research_question": "Does OmpK35 and OmpK36 loss affect carbapenem resistance in Klebsiella pneumoniae?", "warnings": [], "rate_limited_models": [], "audit_log": []})  # type: ignore[arg-type]
 
-    assert len(result["search_queries"]) == 6
-    assert {"ompk35", "ompk36"}.issubset({query.query.split()[2].casefold() for query in result["search_queries"]})
+    queries = [query.query for query in result["search_queries"]]
+    assert queries == [
+        "OmpK35 and OmpK36 loss affect carbapenem resistance in Klebsiella pneumoniae",
+        "OmpK35 and OmpK36 loss affect carbapenem resistance in Klebsiella pneumoniae research methods",
+        "OmpK35 and OmpK36 loss affect carbapenem resistance in Klebsiella pneumoniae reported findings",
+        "OmpK35 and OmpK36 loss affect carbapenem resistance in Klebsiella pneumoniae review",
+    ]
 
 
 @pytest.mark.asyncio

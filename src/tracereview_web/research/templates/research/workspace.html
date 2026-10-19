@@ -1,0 +1,47 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Review papers, evidence, and research run details in TraceReview.">
+  <title>Research workspace · TraceReview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'research/style.css' %}">
+  <link rel="stylesheet" href="{% static 'research/theme.css' %}">
+</head>
+<body class="workspace-page" data-research-id="{{ research_id }}" data-page="{{ page }}" data-view="{{ view }}">
+  <div class="app-shell">
+    <header class="topbar workspace-topbar">
+      <a class="brand" href="/" aria-label="TraceReview new research"><span class="brand-mark">⌕</span><span>TraceReview<small>Research workspace</small></span></a>
+      <nav class="workspace-global-nav" aria-label="Workspace navigation"><a href="/">New research</a><a class="active" href="/research/{{ research_id }}/results">Current research</a></nav>
+      <div class="workspace-account-actions"><a class="topbar-action" href="/settings/api-keys/">API keys</a><a class="topbar-action" href="/">New search <span aria-hidden="true">＋</span></a><form method="post" action="/accounts/logout/">{% csrf_token %}<button class="topbar-action" type="submit">Sign out</button></form></div>
+    </header>
+    <main class="workspace-main">
+      <div id="workspace-error" class="notice error" role="alert" hidden></div>
+      <section class="run-heading"><div class="eyebrow" id="workspace-kicker">RESEARCH RESULTS</div><h1 id="workspace-question">Loading this research run…</h1><div class="run-meta"><span id="workspace-status" class="status status-queued">Loading</span><code id="workspace-id">{{ research_id }}</code></div></section>
+      <nav class="primary-research-nav" aria-label="Research results navigation">
+        <a href="/research/{{ research_id }}/results?view=results" data-view-link="results">Results</a>
+        <a href="/research/{{ research_id }}/results?view=papers" data-view-link="papers">Papers</a>
+        <a href="/research/{{ research_id }}/results?view=export" data-view-link="export">Export</a>
+        <a class="run-details-link" href="/research/{{ research_id }}/run">Run details <span aria-hidden="true">↗</span></a>
+      </nav>
+      <nav class="run-details-nav" aria-label="Run details navigation">
+        <a href="/research/{{ research_id }}/run?view=overview" data-view-link="overview">Overview</a>
+        <a href="/research/{{ research_id }}/run?view=plan" data-view-link="plan">Search plan</a>
+        <a href="/research/{{ research_id }}/run?view=audit" data-view-link="audit">Audit trace</a>
+        <a class="back-results-link" href="/research/{{ research_id }}/results">← Back to results</a>
+      </nav>
+      <form class="csrf-source" aria-hidden="true">{% csrf_token %}</form>
+      <div id="workspace-content" aria-live="polite"></div>
+    </main>
+    <aside id="run-status-indicator" class="run-status-indicator" aria-live="polite">
+      <span class="run-status-dot"></span><span id="run-status-label">Connecting to the research run…</span><a href="/research/{{ research_id }}/run">View run details</a>
+    </aside>
+    <footer>TraceReview <span>·</span> Source wording and provenance stay close to each finding.</footer>
+  </div>
+  <script src="{% static 'research/workspace.js' %}" defer></script>
+</body>
+</html>

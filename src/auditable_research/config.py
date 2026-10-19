@@ -1,9 +1,13 @@
+from pathlib import Path
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=_REPO_ROOT / ".env", extra="ignore")
 
     groq_api_key: str = ""
     openrouter_api_key: str = ""
@@ -15,6 +19,10 @@ class Settings(BaseSettings):
     groq_fallback_model: str = "openai/gpt-oss-20b"
     groq_screening_model: str = "openai/gpt-oss-20b"
     database_url: str
+    django_secret_key: str = "development-only-key-change-before-deployment"
+    user_keys_encryption_key: str = ""
+    django_debug: bool = True
+    django_allowed_hosts: str = "localhost,127.0.0.1,[::1]"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     max_results_per_source: int = Field(default=5, ge=1, le=100)
     max_queries_per_round: int = Field(default=6, ge=1, le=30)

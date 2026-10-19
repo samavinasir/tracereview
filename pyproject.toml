@@ -9,6 +9,10 @@ description = "Literature review you can trace"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "Django>=5.1,<6",
+  "psycopg[binary]>=3.2,<4",
+  "cryptography>=43,<47",
+  "whitenoise>=6.7,<7",
   "fastapi>=0.115,<1",
   "uvicorn[standard]>=0.30,<1",
   "langgraph>=0.2,<2",
@@ -19,7 +23,6 @@ dependencies = [
   "defusedxml>=0.7.1,<1",
   "sqlalchemy[asyncio]>=2.0,<3",
   "asyncpg>=0.29,<1",
-  "pgvector>=0.3,<1",
 ]
 
 [project.optional-dependencies]
@@ -31,7 +34,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/auditable_research"]
+packages = ["src/auditable_research", "src/tracereview_web"]
 
 [tool.ruff]
 line-length = 100

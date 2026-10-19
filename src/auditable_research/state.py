@@ -16,6 +16,7 @@ from .models import (
 class ResearchState(TypedDict, total=False):
     run_id: str
     research_question: str
+    research_options: dict[str, Any]
     research_plan: ResearchPlan
     subquestions: list[str]
     search_queries: list[SearchQuery]

@@ -26,14 +26,3 @@ jobs:
         run: pytest -q tests/test_sources.py tests/test_models_and_storage.py tests/test_api.py tests/test_workflow.py -k 'not end_to_end_graph'
       - name: Agent and workflow integration tests
         run: pytest -q tests/test_workflow.py -k end_to_end_graph
-
-  docker-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          tags: tracereview:ci

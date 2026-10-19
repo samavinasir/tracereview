@@ -81,7 +81,7 @@ async def _database_reachable() -> bool:
 
 @pytest.mark.asyncio
 async def test_fail_interrupted_runs_against_real_postgres() -> None:
-    """Runs only when DATABASE_URL points at a reachable Postgres with pgvector."""
+    """Runs only when DATABASE_URL points at a reachable Postgres."""
     try:
         reachable = await asyncio.wait_for(_database_reachable(), timeout=3)
     except TimeoutError:

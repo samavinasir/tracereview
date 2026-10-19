@@ -1,0 +1,25 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create account · TraceReview</title>
+  <link rel="stylesheet" href="{% static 'research/style.css' %}">
+  <link rel="stylesheet" href="{% static 'research/theme.css' %}">
+</head>
+<body class="account-page">
+  <main class="account-card">
+    <a class="account-brand" href="/">TraceReview</a>
+    <p class="eyebrow">A PRIVATE RESEARCH WORKSPACE</p>
+    <h1>Create account</h1>
+    <p>Your research runs and encrypted provider keys will be private to your account.</p>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button class="account-submit" type="submit">Create account</button>
+    </form>
+    <p class="account-footnote">Already have an account? <a href="/accounts/login/">Sign in</a></p>
+  </main>
+</body>
+</html>

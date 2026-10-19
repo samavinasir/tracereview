@@ -68,7 +68,6 @@ def _without_confidence(value: Any) -> Any:
 
 async def initialize_storage() -> None:
     async with engine.begin() as connection:
-        await connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         columns = await connection.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'research_runs' AND table_schema = current_schema()"))
         existing = {row[0] for row in columns}
         if "run_id" in existing and "id" not in existing:
@@ -79,6 +78,8 @@ async def initialize_storage() -> None:
                 if old_pk.scalar() is not None:
                     await connection.execute(text("ALTER TABLE research_runs_legacy RENAME CONSTRAINT research_runs_pkey TO research_runs_legacy_pkey"))
         await connection.run_sync(Base.metadata.create_all)
+        await connection.execute(text("DROP INDEX IF EXISTS ix_documents_embedding_hnsw"))
+        await connection.execute(text("ALTER TABLE documents DROP COLUMN IF EXISTS embedding"))
         await connection.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS full_text_sections JSONB NOT NULL DEFAULT '[]'::jsonb"))
         await connection.execute(text("ALTER TABLE evidence ADD COLUMN IF NOT EXISTS evidence_level VARCHAR(24) NOT NULL DEFAULT 'contextual'"))
         await connection.execute(text("ALTER TABLE evidence ADD COLUMN IF NOT EXISTS source_part VARCHAR(24) NOT NULL DEFAULT 'abstract'"))
@@ -137,12 +138,12 @@ async def store_cached_paper_digests(entries: list[dict[str, Any]]) -> None:
                 row.digest_json = entry["digest_json"]
 
 
-async def create_research(question: str) -> UUID:
+async def create_research(question: str, research_options: dict[str, Any] | None = None) -> UUID:
     async with Session.begin() as session:
         session_id, question_id, research_id = uuid4(), uuid4(), uuid4()
         research_session = ResearchSession(id=session_id)
         research_question = ResearchQuestion(id=question_id, session_id=session_id, question=question)
-        run = ResearchRun(id=research_id, session_id=session_id, question_id=question_id, status="queued", progress={"current_node": "queued"})
+        run = ResearchRun(id=research_id, session_id=session_id, question_id=question_id, status="queued", progress={"current_node": "queued", "research_options": research_options or {}})
         # These rows form a strict FK chain. Explicit flushes guarantee each
         # parent is persisted before the dependent row is inserted.
         session.add(research_session)
@@ -176,6 +177,7 @@ async def save_run(research_id: UUID, question: str, state: Mapping[str, Any], s
         run.progress = {
             "current_node": _value(latest_event, "node", "queued"),
             "last_action": _value(latest_event, "action"),
+            "research_options": state.get("research_options", {}),
             "source_count": len(sources),
             "paper_count": len(state.get("paper_digests", [])),
             "evidence_count": len(evidence_items),
@@ -246,7 +248,8 @@ async def save_run(research_id: UUID, question: str, state: Mapping[str, Any], s
                 source_row.authors = source_data.authors
                 source_row.publication_year = source_data.publication_year
                 source_row.url = source_data.url
-                source_row.metadata_json = {**source_data.raw_metadata, **({"_tracereview_digest": digests[external_id]} if external_id in digests else {}), **({"_tracereview_selected": True} if external_id in selected_paper_ids else {})}
+                old_review = {key: value for key, value in source_row.metadata_json.items() if key in {"_tracereview_review_decision", "_tracereview_review_note"}}
+                source_row.metadata_json = {**source_data.raw_metadata, **({"_tracereview_digest": digests[external_id]} if external_id in digests else {}), **({"_tracereview_selected": True} if external_id in selected_paper_ids else {}), **old_review}
             document = document_by_source.get(source_row.id)
             if document is None:
                 document = Document(source_id=source_row.id, abstract=source_data.abstract, full_text_sections=_json(source_data.full_text_sections), content_hash=hashlib.sha256((source_data.abstract + json.dumps(_json(source_data.full_text_sections), sort_keys=True)).encode()).hexdigest() if source_data.abstract or source_data.full_text_sections else None)
@@ -454,7 +457,24 @@ async def get_sources(research_id: UUID) -> list[dict] | None:
         docs = list((await session.scalars(select(Document).where(Document.source_id.in_(ids)))).all()) if ids else []
         doc_by_source = {doc.source_id: doc for doc in docs}
         counts = dict((await session.execute(select(Evidence.document_id, func.count(Evidence.id)).where(Evidence.research_id == research_id).group_by(Evidence.document_id))).all())
-        return [{"id": str(row.id), "source_id": row.provider_source_id, "alternate_source_ids": row.metadata_json.get("alternate_source_ids", []), "alternate_sources": row.metadata_json.get("alternate_sources", []), "relevance_level": row.metadata_json.get("_tracereview_relevance"), "provider": row.provider, "title": row.title, "authors": row.authors, "publication_year": row.publication_year, "url": row.url, "retrieved_at": row.retrieved_at, "abstract": doc_by_source[row.id].abstract if row.id in doc_by_source else "", "available_full_text_parts": list(dict.fromkeys(section.get("source_part") for section in (doc_by_source[row.id].full_text_sections if row.id in doc_by_source else []) if section.get("source_part"))), "evidence_count": counts.get(doc_by_source[row.id].id, 0) if row.id in doc_by_source else 0, "paper_digest": row.metadata_json.get("_tracereview_digest"), "selected_for_review": bool(row.metadata_json.get("_tracereview_selected") or row.metadata_json.get("_tracereview_digest"))} for row in rows]
+        return [{"id": str(row.id), "source_id": row.provider_source_id, "alternate_source_ids": row.metadata_json.get("alternate_source_ids", []), "alternate_sources": row.metadata_json.get("alternate_sources", []), "relevance_level": row.metadata_json.get("_tracereview_relevance"), "relevance_score": row.metadata_json.get("_tracereview_relevance_score"), "relevance_reason": row.metadata_json.get("_tracereview_relevance_reason"), "exclusion_reason": row.metadata_json.get("_tracereview_exclusion_reason"), "matched_terms": row.metadata_json.get("_tracereview_matched_terms", []), "review_decision": row.metadata_json.get("_tracereview_review_decision", "include" if row.metadata_json.get("_tracereview_selected") or row.metadata_json.get("_tracereview_digest") else "unreviewed"), "review_note": row.metadata_json.get("_tracereview_review_note", ""), "provider": row.provider, "title": row.title, "authors": row.authors, "publication_year": row.publication_year, "url": row.url, "retrieved_at": row.retrieved_at, "abstract": doc_by_source[row.id].abstract if row.id in doc_by_source else "", "available_full_text_parts": list(dict.fromkeys(section.get("source_part") for section in (doc_by_source[row.id].full_text_sections if row.id in doc_by_source else []) if section.get("source_part"))), "evidence_count": counts.get(doc_by_source[row.id].id, 0) if row.id in doc_by_source else 0, "paper_digest": row.metadata_json.get("_tracereview_digest"), "selected_for_review": bool(row.metadata_json.get("_tracereview_selected") or row.metadata_json.get("_tracereview_digest"))} for row in rows]
+
+
+async def update_source_review(research_id: UUID, source_id: str, decision: str, note: str = "") -> bool:
+    """Persist a researcher's include/exclude decision without changing source data."""
+    async with Session.begin() as session:
+        source = await session.scalar(select(Source).where(Source.research_id == research_id, Source.provider_source_id == source_id))
+        if source is None:
+            return False
+        metadata = dict(source.metadata_json or {})
+        if decision == "unreviewed":
+            metadata.pop("_tracereview_review_decision", None)
+            metadata.pop("_tracereview_review_note", None)
+        else:
+            metadata["_tracereview_review_decision"] = decision
+            metadata["_tracereview_review_note"] = note[:1000]
+        source.metadata_json = metadata
+        return True
 
 
 async def get_evidence(research_id: UUID) -> list[dict] | None:

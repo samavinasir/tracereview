@@ -1,0 +1,33 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your API keys · TraceReview</title>
+  <link rel="stylesheet" href="{% static 'research/style.css' %}">
+  <link rel="stylesheet" href="{% static 'research/theme.css' %}">
+</head>
+<body class="account-page">
+  <main class="account-card api-key-card">
+    <a class="account-brand" href="/">TraceReview</a>
+    <p class="eyebrow">ACCOUNT SETTINGS</p>
+    <h1>Your provider keys</h1>
+    <p>Keys are encrypted before being saved. Each research run uses only the keys on your account. TraceReview does not display saved key values.</p>
+    {% for message in messages %}<div class="account-message {{ message.tags }}">{{ message }}</div>{% endfor %}
+    {% if not encryption_ready %}<div class="account-message error">The site administrator must configure secure key storage before users can save keys.</div>{% endif %}
+    <form method="post">
+      {% csrf_token %}
+      {% for field, label in key_fields.items %}
+        <div class="api-key-field">
+          <label for="{{ field }}">{{ label }}{% if field == "groq_api_key" %} <span class="required-label">Required for research</span>{% endif %}</label>
+          <input id="{{ field }}" name="{{ field }}" type="password" autocomplete="new-password" placeholder="{% if field in configured_keys %}Saved — leave blank to keep current key{% else %}Paste your {{ label }}{% endif %}" {% if not encryption_ready %}disabled{% endif %}>
+          {% if field in configured_keys %}<label class="key-clear"><input type="checkbox" name="clear_{{ field }}"> Remove saved key</label>{% endif %}
+        </div>
+      {% endfor %}
+      <button class="account-submit" type="submit" {% if not encryption_ready %}disabled{% endif %}>Save keys</button>
+    </form>
+    <p class="account-footnote"><a href="/">← Back to research</a></p>
+  </main>
+</body>
+</html>

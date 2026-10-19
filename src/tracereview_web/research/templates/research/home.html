@@ -1,0 +1,78 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TraceReview helps researchers discover relevant peer-reviewed literature with clarity and speed.">
+  <title>TraceReview — Precision Paper Discovery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'research/style.css' %}">
+  <link rel="stylesheet" href="{% static 'research/theme.css' %}">
+</head>
+<body class="marketing-home">
+  <div class="page-shell">
+    <header class="marketing-header">
+      <nav aria-label="Main navigation" class="marketing-nav">
+        <a href="#top" class="marketing-brand" aria-label="TraceReview home"><span class="marketing-logo" aria-hidden="true">⌕</span><span data-template-id="brand-name">TraceReview</span></a>
+        <div class="marketing-nav-links"><a data-template-id="nav-features" href="#features">Features</a><a data-template-id="nav-use-cases" href="#use-cases">Use Cases</a>{% if user.is_authenticated %}<a href="/settings/api-keys/">API keys</a>{% else %}<a href="/accounts/login/">Sign in</a><a href="/accounts/signup/">Create account</a>{% endif %}<button data-template-id="nav-cta" id="get-started" type="button">Get Started</button></div>
+      </nav>
+    </header>
+    <main id="top">
+      <section class="marketing-hero">
+        <div class="marketing-hero-grid">
+          <div class="marketing-hero-copy">
+            <div data-template-id="hero-eyebrow" class="marketing-eyebrow-pill">RESEARCH, WITHOUT THE RABBIT HOLE</div>
+            <h1 data-template-id="hero-title">Precision Paper Discovery for Researchers</h1>
+            <p data-template-id="hero-description" class="marketing-hero-description">Find the peer-reviewed work that matters. Go from a research question to relevant literature and original sources—without the noise.</p>
+            <form id="paper-search" role="search" class="marketing-search-shell">
+              {% csrf_token %}
+              <div class="marketing-search-input-wrap"><span aria-hidden="true" class="search-glyph">⌕</span><label data-template-id="search-label" for="research-query" class="visually-hidden">Research question</label><textarea data-template-id="search-input" id="research-query" name="question" rows="2" minlength="10" maxlength="4000" placeholder="What would you like to research? Write your question here…" aria-describedby="search-help search-error" required></textarea></div>
+              <div class="marketing-search-bottom">
+                <details class="marketing-options">
+                  <summary><span aria-hidden="true">☷</span> Search options</summary>
+                  <div class="marketing-options-panel">
+                    <div class="option-grid">
+                      <label>Field<select id="research-field"><option value="auto">Choose from question</option><option value="biology">Biology</option><option value="medicine">Medicine and health</option><option value="computer_science">Computer science</option><option value="engineering">Engineering</option><option value="social_sciences">Social sciences</option><option value="humanities">Humanities</option><option value="other">Other</option></select></label>
+                      <label>Review goal<select id="review-goal"><option value="explore">Explore a topic</option><option value="compare">Compare approaches</option><option value="methods">Find methods</option><option value="evidence">Review reported evidence</option></select></label>
+                      <label>From year<input id="year-from" type="number" min="1800" max="2100" placeholder="Any year"></label>
+                      <label>To year<input id="year-to" type="number" min="1800" max="2100" placeholder="Any year"></label>
+                    </div>
+                    <span class="source-options-label">Sources <span>Choose none to use the defaults</span></span>
+                    <div class="source-options"><label><input type="checkbox" name="source-filter" value="pubmed"> PubMed</label><label><input type="checkbox" name="source-filter" value="europe_pmc"> Europe PMC</label><label><input type="checkbox" name="source-filter" value="openalex"> OpenAlex</label><label><input type="checkbox" name="source-filter" value="semantic_scholar"> Semantic Scholar</label><label><input type="checkbox" name="source-filter" value="uniprot"> UniProt</label></div>
+                    <label class="full-text-option"><input id="full-text-only" type="checkbox"> Only include records with accessible full-text sections</label>
+                  </div>
+                </details>
+                <p data-template-id="search-help" id="search-help">TraceReview searches scholarly sources and opens your research results.</p>
+                <button data-template-id="search-button" id="submit-button" type="submit">Search papers <span aria-hidden="true">↗</span></button>
+              </div>
+            </form>
+            <p id="search-error" role="status" aria-live="polite" class="marketing-search-error" hidden></p>
+            <div class="marketing-social-proof"><span class="avatar-stack" aria-hidden="true"><span></span><span></span><span></span></span><span data-template-id="social-proof">Built for curious researchers worldwide</span></div>
+          </div>
+          <div class="marketing-visual-wrap">
+            <div class="marketing-visual-glow" aria-hidden="true"></div>
+            <div data-template-id="hero-image-frame" class="marketing-visual-card">
+              <div class="paper-visual" aria-hidden="true"><div class="paper-visual-toolbar"><span></span><span></span><span></span><i></i></div><div class="paper-visual-content"><div class="paper-visual-tag">RESEARCH ARTICLE</div><div class="paper-visual-title"></div><div class="paper-visual-title short"></div><div class="paper-visual-author"></div><div class="paper-visual-rule"></div><div class="paper-visual-subtitle"></div><div class="paper-visual-line"></div><div class="paper-visual-line"></div><div class="paper-visual-line medium"></div><div class="paper-visual-highlight"></div><div class="paper-visual-line"></div><div class="paper-visual-line short-line"></div></div><span class="paper-visual-badge">SOURCE VERIFIED</span></div>
+              <div class="marketing-image-caption"><div><span aria-hidden="true">▤</span><span data-template-id="image-kicker">FROM QUESTION TO SOURCE</span></div><p data-template-id="image-caption">Better evidence starts with a better search.</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="features" class="marketing-features">
+        <div class="marketing-section-intro"><h2 data-template-id="features-title">Less searching. More understanding.</h2><p data-template-id="features-description">A clearer path from your first question to the literature worth reading.</p></div>
+        <div class="marketing-feature-grid">
+          <article data-template-id="feature-one-card" class="marketing-feature-card"><span aria-hidden="true" class="marketing-feature-icon">ϟ</span><h3 data-template-id="feature-one-title">Lightning-Fast Semantic Search</h3><p data-template-id="feature-one-description">Explore research by meaning, not just matching keywords, to narrow in on relevant work faster.</p></article>
+          <article data-template-id="feature-two-card" class="marketing-feature-card"><span aria-hidden="true" class="marketing-feature-icon">↗</span><h3 data-template-id="feature-two-title">Original Paper Links</h3><p data-template-id="feature-two-description">Follow the trail back to source publications so you can evaluate the evidence for yourself.</p></article>
+          <article data-template-id="feature-three-card" class="marketing-feature-card"><span aria-hidden="true" class="marketing-feature-icon">☷</span><h3 data-template-id="feature-three-title">Zero Fluff, Pure Literature</h3><p data-template-id="feature-three-description">Stay focused on academic sources and spend less time wading through unrelated results.</p></article>
+        </div>
+      </section>
+      <section id="use-cases" data-template-id="use-cases-section" class="marketing-use-cases"><div><h2 data-template-id="use-cases-title">For every starting point.</h2><p data-template-id="use-cases-description">Explore a new field, scope a review, or track down the source behind a claim.</p></div><a data-template-id="use-cases-link" href="#paper-search">Start with a question <span aria-hidden="true">→</span></a></section>
+    </main>
+    <footer data-template-id="site-footer" class="marketing-footer"><div class="marketing-footer-main"><div><p data-template-id="footer-brand" class="marketing-footer-brand">TraceReview</p><p data-template-id="footer-statement">Find the papers. Follow the evidence.</p></div><nav aria-label="Footer navigation"><a data-template-id="footer-features" href="#features">Features</a><a data-template-id="footer-use-cases" href="#use-cases">Use Cases</a><a data-template-id="footer-top" href="#top">Back to top</a></nav></div><div class="marketing-footer-copy"><p data-template-id="footer-copyright">© 2026 TraceReview. All rights reserved.</p></div></footer>
+  </div>
+  <script src="{% static 'research/home.js' %}" defer></script>
+</body>
+</html>

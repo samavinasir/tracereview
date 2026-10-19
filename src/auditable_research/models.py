@@ -86,7 +86,7 @@ class PaperDigest(BaseModel):
     authors_conclusion: str = Field(default="", max_length=2000)
     conclusion_source: Literal["abstract_last_sentence", "not_available"] = "not_available"
     why_it_matches: str = Field(max_length=500)
-    study_type: Literal["experimental", "clinical_observational", "computational", "review", "systematic_review_meta_analysis", "case_report", "other", "unclear"]
+    study_type: str = Field(default="unclear", max_length=80)
 
 
 class EvidenceItem(BaseModel):

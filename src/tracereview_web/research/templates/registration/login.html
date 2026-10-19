@@ -1,0 +1,26 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · TraceReview</title>
+  <link rel="stylesheet" href="{% static 'research/style.css' %}">
+  <link rel="stylesheet" href="{% static 'research/theme.css' %}">
+</head>
+<body class="account-page">
+  <main class="account-card">
+    <a class="account-brand" href="/">TraceReview</a>
+    <p class="eyebrow">YOUR RESEARCH WORKSPACE</p>
+    <h1>Sign in</h1>
+    <p>Sign in to use your own provider keys and access your saved research.</p>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      <button class="account-submit" type="submit">Sign in</button>
+    </form>
+    <p class="account-footnote">New to TraceReview? <a href="/accounts/signup/">Create an account</a></p>
+  </main>
+</body>
+</html>
