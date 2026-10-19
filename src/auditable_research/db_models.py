@@ -60,6 +60,25 @@ class ResearchRun(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
 
+class ResearchJob(Base):
+    """Durable work item; provider credentials stay encrypted in Django's user table."""
+
+    __tablename__ = "research_jobs"
+
+    research_id: Mapped[UUID] = mapped_column(ForeignKey("research_runs.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    research_options: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="queued", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
+    lease_owner: Mapped[str | None] = mapped_column(String(160))
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+
 class ResearchPlan(Base):
     __tablename__ = "research_plans"
 

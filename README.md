@@ -96,10 +96,16 @@ python manage.py createsuperuser
 
 Create an account from the home page, then open **API keys** and save a Groq key (required to run research). OpenRouter, NCBI, and Semantic Scholar keys are optional. Each user's runs are private to that account.
 
-Run the Django ASGI web app (the persistent ASGI loop keeps background research tasks running):
+Run the Django ASGI web app in one terminal:
 
 ```powershell
 uvicorn tracereview_web.asgi:application --app-dir src --reload
+```
+
+Run the durable PostgreSQL queue worker in a second terminal:
+
+```powershell
+python -m tracereview_web.worker
 ```
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000) for the TraceReview interface or [http://127.0.0.1:8000/admin](http://127.0.0.1:8000/admin) for Django admin. Django serves the HTML, CSS, and browser JavaScript from one origin; no separate Vite server is needed.
@@ -112,11 +118,9 @@ The Django interface uses the built-in templates, CSS, and browser JavaScript; i
 
 Rate limiting is per client IP. Behind a reverse proxy, set `FORWARDED_ALLOW_IPS` so uvicorn reads the real client address from `X-Forwarded-For`. If you expose the API directly, leave that unset or the header could be spoofed.
 
-Research runs execute inside the API process. If the API restarts mid-run, the run cannot continue, so on startup any run still marked `queued` or `running` is marked `failed` with an explanatory message, and you can simply start it again.
+Research requests and their queue records are committed together in PostgreSQL. The separate worker claims jobs using row locks, renews a lease while processing, and retries failures up to three attempts. If a worker exits unexpectedly, its lease expires and another worker can resume the job; partial run artifacts are cleared before replay. Provider keys are read from the user's encrypted Django credential record when a worker claims a job, and are never stored in the queue. A retry after an interrupted external API call may repeat that call. The rate limiter is still process-local, so it is not shared across multiple web replicas. Back up PostgreSQL before upgrades and migrations. Django admin uses the PostgreSQL connection defined by `DATABASE_URL` and needs the standard `python manage.py migrate` setup for Django's own auth and session tables.
 
-Background research work and rate limits are process-local, so use a durable job queue and a shared limiter before scaling to multiple web replicas. Back up PostgreSQL before upgrades and migrations. Django admin uses the PostgreSQL connection defined by `DATABASE_URL` and needs the standard `python manage.py migrate` setup for Django's own auth and session tables.
-
-For a Vercel deployment, set `DATABASE_URL`, `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=false`, `DJANGO_ALLOWED_HOSTS`, `CORS_ORIGINS` (also used as trusted CSRF origins), and one stable `USER_KEYS_ENCRYPTION_KEY`. Do not add provider API keys as shared Vercel variables for the Django interface; each signed-in user saves their own keys under API keys. Vercel functions have a maximum execution duration, so move the current in-process `asyncio.create_task` workflow to a durable queue and worker before relying on long research runs in production.
+For Vercel, the root `vercel.toml` configures a Django web deployment plus one Python Daemon worker in `iad1`. The Daemon uses the included `Dockerfile` and the same project environment variables as the web app. Configure `DATABASE_URL` (a reachable PostgreSQL URL with SSL as required by the provider), `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=false`, `DJANGO_ALLOWED_HOSTS`, `CORS_ORIGINS` (also used as trusted CSRF origins), and one stable `USER_KEYS_ENCRYPTION_KEY` in Vercel's project settings for every environment you deploy. Apply Django migrations (`python manage.py migrate`) as part of release setup before users sign up. Do not add provider API keys as shared Vercel variables for the Django interface; each signed-in user saves their own keys under API keys. Vercel Daemons are currently in public beta and keep the configured worker instances running alongside the web deployment; if Daemons are unavailable for your Vercel account, deploy the same worker container on a separate always-on Python worker host with the same database and secrets.
 
 ## License
 

@@ -22,8 +22,7 @@ from auditable_research.provider_credentials import (
     encryption_is_configured,
 )
 from auditable_research.storage import (
-    create_research,
-    fail_interrupted_runs,
+    create_queued_research,
     get_audit,
     get_claims,
     get_evidence,
@@ -35,7 +34,6 @@ from auditable_research.storage import (
     initialize_storage,
     update_source_review,
 )
-from auditable_research.workflow_runtime import run_workflow
 
 from .models import ResearchRunOwner, UserProviderCredentials
 
@@ -44,7 +42,6 @@ _storage_lock = asyncio.Lock()
 _storage_ready = False
 _rate_lock = asyncio.Lock()
 _request_times: dict[str, deque[float]] = defaultdict(deque)
-_tasks: set[asyncio.Task] = set()
 _SECRET_PATTERNS = (
     (re.compile(r"(?i)\bBearer\s+[^\s,;]+"), "Bearer [REDACTED]"),
     (re.compile(r"\b(?:gsk_|sk-)[A-Za-z0-9_-]{10,}\b"), "[REDACTED_SECRET]"),
@@ -60,9 +57,6 @@ async def _ensure_storage() -> None:
     async with _storage_lock:
         if not _storage_ready:
             await initialize_storage()
-            interrupted = await fail_interrupted_runs()
-            if interrupted:
-                logger.warning("Marked %d interrupted research run(s) as failed after restart", interrupted)
             _storage_ready = True
 
 
@@ -214,14 +208,11 @@ async def start_research(request: HttpRequest) -> JsonResponse:
         attempts.append(now)
     try:
         await _ensure_storage()
-        research_id = await create_research(question, options)
+        research_id = await create_queued_research(question, options, user_id=user.pk)
         await ResearchRunOwner.objects.acreate(research_id=research_id, user=user)
     except Exception as exc:
         logger.error("Research run creation failed user_id=%s error_type=%s", user.pk, type(exc).__name__)
         return JsonResponse({"detail": "Could not queue research run. Check API and database health."}, status=503)
-    task = asyncio.create_task(run_workflow(research_id, question, options, provider_keys=user_keys))
-    _tasks.add(task)
-    task.add_done_callback(_tasks.discard)
     return JsonResponse({
         "research_id": str(research_id),
         "run_id": str(research_id),

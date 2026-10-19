@@ -1,0 +1,7 @@
+#:schema https://openapi.vercel.sh/vercel.json
+
+[daemons.research]
+root = "."
+entrypoint = "Dockerfile"
+command = ["python", "-m", "tracereview_web.worker"]
+replicas.iad1 = 1

@@ -6,7 +6,7 @@ from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
 
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -16,9 +16,8 @@ from .graph import paper_review_completion_issue, research_graph
 from .models import AuditEvent
 from .state import ResearchState
 from .storage import (
-    create_research,
+    create_queued_research,
     engine,
-    fail_interrupted_runs,
     get_audit,
     get_claims,
     get_evidence,
@@ -103,9 +102,6 @@ class ResearchRequest(BaseModel):
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await initialize_storage()
-    interrupted = await fail_interrupted_runs()
-    if interrupted:
-        logger.warning("Marked %d interrupted research run(s) as failed after restart", interrupted)
     yield
     await engine.dispose()
 
@@ -175,13 +171,12 @@ async def _run_workflow(research_id: UUID, question: str) -> None:
 
 
 @app.post("/research", status_code=202, dependencies=[Depends(_limit_research_requests)])
-async def start_research(request: ResearchRequest, background_tasks: BackgroundTasks) -> dict[str, str]:
+async def start_research(request: ResearchRequest) -> dict[str, str]:
     try:
-        research_id = await create_research(request.question)
+        research_id = await create_queued_research(request.question)
     except Exception as exc:
         logger.error("Research run creation failed error_type=%s", type(exc).__name__)
         raise HTTPException(status_code=503, detail="Could not queue research run. Check API and database health.") from None
-    background_tasks.add_task(_run_workflow, research_id, request.question)
     return {"research_id": str(research_id), "run_id": str(research_id), "status": "queued", "result_url": f"/research/{research_id}"}
 
 

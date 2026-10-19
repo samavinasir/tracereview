@@ -1,11 +1,11 @@
 import hashlib
 import json
 from collections.abc import Mapping
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select, text, update
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from .config import settings
@@ -18,6 +18,7 @@ from .db_models import (
     Evidence,
     PaperDigestCache,
     Report,
+    ResearchJob,
     ResearchPlan,
     ResearchQuestion,
     ResearchRun,
@@ -95,12 +96,10 @@ INTERRUPTED_RUN_ERROR = "This run was interrupted because the API restarted befo
 
 
 async def fail_interrupted_runs() -> int:
-    """Mark runs left queued/running by a previous process as failed.
+    """Legacy helper for installations that still run the pre-queue workflow path.
 
-    Workflows run as in-process background tasks, so a restart or deploy kills them
-    without any final status update and the UI would poll forever. Call this once at
-    startup. It assumes a single API process (as documented in the README); with
-    several replicas it would also fail runs that another replica is still working on.
+    Queue-backed web and worker processes must not call this: job leases recover
+    interrupted work without changing its run to failed.
     """
     async with Session.begin() as session:
         result = await session.execute(
@@ -140,19 +139,165 @@ async def store_cached_paper_digests(entries: list[dict[str, Any]]) -> None:
 
 async def create_research(question: str, research_options: dict[str, Any] | None = None) -> UUID:
     async with Session.begin() as session:
-        session_id, question_id, research_id = uuid4(), uuid4(), uuid4()
-        research_session = ResearchSession(id=session_id)
-        research_question = ResearchQuestion(id=question_id, session_id=session_id, question=question)
-        run = ResearchRun(id=research_id, session_id=session_id, question_id=question_id, status="queued", progress={"current_node": "queued", "research_options": research_options or {}})
-        # These rows form a strict FK chain. Explicit flushes guarantee each
-        # parent is persisted before the dependent row is inserted.
-        session.add(research_session)
-        await session.flush()
-        session.add(research_question)
-        await session.flush()
-        session.add(run)
-        await session.flush()
-        return run.id
+        return await _create_research(session, question, research_options)
+
+
+async def _create_research(session, question: str, research_options: dict[str, Any] | None) -> UUID:
+    session_id, question_id, research_id = uuid4(), uuid4(), uuid4()
+    research_session = ResearchSession(id=session_id)
+    research_question = ResearchQuestion(id=question_id, session_id=session_id, question=question)
+    run = ResearchRun(id=research_id, session_id=session_id, question_id=question_id, status="queued", progress={"current_node": "queued", "research_options": research_options or {}})
+    session.add(research_session)
+    await session.flush()
+    session.add(research_question)
+    await session.flush()
+    session.add(run)
+    await session.flush()
+    return run.id
+
+
+async def create_queued_research(question: str, research_options: dict[str, Any] | None = None, user_id: int | None = None) -> UUID:
+    """Create the visible run and its queue item atomically."""
+    async with Session.begin() as session:
+        research_id = await _create_research(session, question, research_options)
+        session.add(ResearchJob(
+            research_id=research_id,
+            user_id=user_id,
+            question=question,
+            research_options=research_options or {},
+            status="queued",
+        ))
+        return research_id
+
+
+async def claim_research_job(worker_id: str, lease_seconds: int = 180, max_attempts: int = 3) -> dict[str, Any] | None:
+    """Atomically claim queued work or a job whose previous worker lease expired."""
+    now = datetime.now(UTC)
+    async with Session.begin() as session:
+        expired = (await session.scalars(
+            select(ResearchJob).where(
+                ResearchJob.status == "running",
+                ResearchJob.attempts >= max_attempts,
+                ResearchJob.lease_expires_at < now,
+            ).with_for_update(skip_locked=True)
+        )).all()
+        for job in expired:
+            job.status = "failed"
+            job.last_error = "Worker lease expired after the maximum number of attempts."
+            job.lease_owner = None
+            job.lease_expires_at = None
+            run = await session.get(ResearchRun, job.research_id)
+            if run is not None and run.status in {"queued", "running"}:
+                run.status = "failed"
+                run.error = job.last_error
+        stmt = (
+            select(ResearchJob)
+            .where(
+                ResearchJob.attempts < max_attempts,
+                ResearchJob.available_at <= now,
+                ((ResearchJob.status == "queued") | ((ResearchJob.status == "running") & (ResearchJob.lease_expires_at < now))),
+            )
+            .order_by(ResearchJob.created_at)
+            .with_for_update(skip_locked=True)
+            .limit(1)
+        )
+        job = await session.scalar(stmt)
+        if job is None:
+            return None
+        was_interrupted = job.status == "running" or job.attempts > 0
+        job.status = "running"
+        job.attempts += 1
+        job.lease_owner = worker_id
+        job.lease_expires_at = now + timedelta(seconds=lease_seconds)
+        job.updated_at = now
+        if was_interrupted:
+            await _reset_run_for_retry(session, job.research_id)
+        return {
+            "research_id": job.research_id,
+            "user_id": job.user_id,
+            "question": job.question,
+            "research_options": job.research_options,
+            "attempts": job.attempts,
+        }
+
+
+async def _reset_run_for_retry(session, research_id: UUID) -> None:
+    """Remove partial graph output before replaying a lease-expired workflow."""
+    source_ids = select(Source.id).where(Source.research_id == research_id)
+    doc_ids = select(Document.id).where(Document.source_id.in_(source_ids))
+    evidence_ids = select(Evidence.id).where(Evidence.research_id == research_id)
+    claim_ids = select(Claim.id).where(Claim.research_id == research_id)
+    await session.execute(delete(ClaimEvidence).where(ClaimEvidence.claim_id.in_(claim_ids) | ClaimEvidence.evidence_id.in_(evidence_ids)))
+    await session.execute(delete(VerificationResult).where(VerificationResult.claim_id.in_(claim_ids)))
+    await session.execute(delete(Claim).where(Claim.research_id == research_id))
+    await session.execute(delete(Evidence).where(Evidence.research_id == research_id))
+    await session.execute(delete(Document).where(Document.id.in_(doc_ids)))
+    await session.execute(delete(Source).where(Source.research_id == research_id))
+    await session.execute(delete(AgentEvent).where(AgentEvent.research_id == research_id))
+    await session.execute(delete(Report).where(Report.research_id == research_id))
+    await session.execute(delete(ResearchPlan).where(ResearchPlan.research_id == research_id))
+    run = await session.get(ResearchRun, research_id)
+    if run is not None:
+        run.status = "queued"
+        run.error = None
+        run.progress = {"current_node": "queued", "research_options": run.progress.get("research_options", {})}
+        run.latency_ms = None
+        run.prompt_tokens = None
+        run.completion_tokens = None
+        run.total_tokens = None
+        run.estimated_cost_usd = None
+
+
+async def renew_research_job_lease(research_id: UUID, worker_id: str, lease_seconds: int = 180) -> bool:
+    async with Session.begin() as session:
+        result = await session.execute(
+            update(ResearchJob)
+            .where(ResearchJob.research_id == research_id, ResearchJob.status == "running", ResearchJob.lease_owner == worker_id)
+            .values(lease_expires_at=datetime.now(UTC) + timedelta(seconds=lease_seconds), updated_at=datetime.now(UTC))
+        )
+        return bool(result.rowcount)
+
+
+async def finish_research_job(research_id: UUID, worker_id: str, status: str, error: str | None = None, max_attempts: int = 3) -> None:
+    """Finalize a job, retrying a failed attempt with a bounded backoff."""
+    now = datetime.now(UTC)
+    async with Session.begin() as session:
+        job = await session.get(ResearchJob, research_id)
+        if job is None or job.lease_owner != worker_id or job.status != "running":
+            return
+        run = await session.get(ResearchRun, research_id)
+        if run is not None and run.status in {"completed", "failed"}:
+            status = run.status
+        if status == "failed" and job.attempts < max_attempts:
+            job.status = "queued"
+            job.available_at = now + timedelta(seconds=min(60, 5 * (2 ** (job.attempts - 1))))
+            job.last_error = error or (run.error if run else "Research workflow failed")
+            job.lease_owner = None
+            job.lease_expires_at = None
+        else:
+            job.status = "completed" if status == "completed" else "failed"
+            job.last_error = None if status == "completed" else (error or (run.error if run else "Research workflow failed"))
+            job.lease_owner = None
+            job.lease_expires_at = None
+
+
+async def release_research_job(research_id: UUID, worker_id: str, error: str) -> None:
+    """Release a claimed job after a worker-side error; it becomes claimable again."""
+    now = datetime.now(UTC)
+    async with Session.begin() as session:
+        job = await session.get(ResearchJob, research_id)
+        if job is None or job.lease_owner != worker_id:
+            return
+        job.status = "queued" if job.attempts < 3 else "failed"
+        job.last_error = error[:500]
+        job.available_at = now + timedelta(seconds=min(60, 5 * (2 ** max(0, job.attempts - 1))))
+        job.lease_owner = None
+        job.lease_expires_at = None
+        if job.status == "failed":
+            run = await session.get(ResearchRun, research_id)
+            if run is not None and run.status in {"queued", "running"}:
+                run.status = "failed"
+                run.error = error[:500]
 
 
 async def save_run(research_id: UUID, question: str, state: Mapping[str, Any], status: str, latency_ms: float | None = None, error: str | None = None) -> None:
