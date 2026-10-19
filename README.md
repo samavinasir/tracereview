@@ -120,4 +120,4 @@ For a Vercel deployment, set `DATABASE_URL`, `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=
 
 ## License
 
-No license has been selected yet. Add a `LICENSE` file before describing this repository as open source or allowing reuse by others.
+This project is licensed under the [Apache License 2.0](LICENSE).

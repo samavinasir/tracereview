@@ -27,7 +27,6 @@ from .agents import (
     invoke_structured,
 )
 from .config import settings
-from .provider_credentials import provider_api_key
 from .models import (
     AuditEvent,
     CandidateClaim,
@@ -43,6 +42,7 @@ from .models import (
     SourceRecord,
     VerifiedClaim,
 )
+from .provider_credentials import provider_api_key
 from .state import ResearchState
 from .storage import get_cached_paper_digests, store_cached_paper_digests
 from .text_utils import split_sentences

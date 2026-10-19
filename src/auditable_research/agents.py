@@ -8,8 +8,8 @@ from langchain_groq import ChatGroq
 from pydantic import BaseModel, Field
 
 from .config import settings
-from .provider_credentials import provider_api_key
 from .models import ClaimVerification, EvidenceItem, ResearchPlan, SearchQuery, SourceRecord
+from .provider_credentials import provider_api_key
 
 T = TypeVar("T", bound=BaseModel)
 

@@ -1,8 +1,8 @@
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.views import LoginView, LogoutView
-from django.conf import settings
-from django.urls import path
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.urls import path
 
 from tracereview_web.research import views
 

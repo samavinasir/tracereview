@@ -1,8 +1,8 @@
 """Encrypted user credentials and per-workflow API-key context."""
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar, Token
-from typing import Iterator
 
 from cryptography.fernet import Fernet, InvalidToken
 

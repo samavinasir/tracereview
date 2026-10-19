@@ -15,6 +15,12 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET, require_POST
 
 from auditable_research.config import settings
+from auditable_research.provider_credentials import (
+    PROVIDER_KEY_FIELDS,
+    decrypt_provider_keys,
+    encrypt_provider_keys,
+    encryption_is_configured,
+)
 from auditable_research.storage import (
     create_research,
     fail_interrupted_runs,
@@ -30,12 +36,6 @@ from auditable_research.storage import (
     update_source_review,
 )
 from auditable_research.workflow_runtime import run_workflow
-from auditable_research.provider_credentials import (
-    PROVIDER_KEY_FIELDS,
-    decrypt_provider_keys,
-    encrypt_provider_keys,
-    encryption_is_configured,
-)
 
 from .models import ResearchRunOwner, UserProviderCredentials
 
@@ -93,7 +93,6 @@ def signup(request: HttpRequest) -> HttpResponse:
 def api_keys(request: HttpRequest) -> HttpResponse:
     row, _ = UserProviderCredentials.objects.get_or_create(user=request.user)
     keys: dict[str, str] = {}
-    configured = bool(row.encrypted_keys)
     encryption_ready = encryption_is_configured()
     if encryption_ready:
         try:
