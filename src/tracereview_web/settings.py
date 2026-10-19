@@ -59,7 +59,9 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+# Vercel serves Django's collected static assets from its root-level `public`
+# directory. Keep the `static/` URL prefix in the collected path.
+STATIC_ROOT = BASE_DIR / "public" / "static"
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
