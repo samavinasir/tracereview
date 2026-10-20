@@ -38,6 +38,9 @@ dev = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/auditable_research", "src/tracereview_web"]
 
+[tool.vercel.scripts]
+build = "python manage.py migrate --noinput"
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
