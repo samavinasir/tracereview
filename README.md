@@ -55,9 +55,6 @@
 
 Successful summaries are cached; failed summaries stay visibly unreviewed and do not become scientific findings. Search requests use bounded concurrency: PubMed calls are paced separately, and model calls use a process-local concurrency limit and token budget.
 
-> [!NOTE]
-> Retrieved titles, abstracts and other provider fields are untrusted source data. They are displayed as text and are not treated as instructions.
-
 <br>
 
 <a id="tech-stack"></a>
@@ -165,32 +162,7 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 
 <br>
 
-<a id="production-notes"></a>
-<p align="center"><img src="assets/h-prod.svg" alt="Production notes" width="100%"></p>
-
-- **Rate limiting** is per client IP. Behind a reverse proxy, set `FORWARDED_ALLOW_IPS` so uvicorn reads the real client address from `X-Forwarded-For`. If you expose the app directly, leave it unset so the header cannot be spoofed.
-- **Durable queue.** Research requests and queue records are committed in PostgreSQL. The worker claims jobs with row locks, renews a lease while processing, and retries failures up to three attempts. Partial run artifacts are cleared before replay.
-- **Provider keys** are read from the user's encrypted Django credential record when a worker claims a job and are never stored in the queue. The rate limiter is process-local, so it is not shared across multiple web replicas.
-- **Backups.** Back up PostgreSQL before upgrades and migrations.
-- **Static files.** Run `python manage.py collectstatic --noinput` during deployment; WhiteNoise serves the collected files. The Django interface needs no separate frontend dev server.
-
-<details>
-<summary><b>Deploying on Vercel</b></summary>
-
-<br>
-
-The root `vercel.toml` configures a Django web deployment plus one Python Daemon worker in `iad1`. The Daemon uses the included `Dockerfile` and the same environment variables as the web app.
-
-1. Configure `DATABASE_URL` (a reachable PostgreSQL URL with SSL as required by your provider), `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=false`, `CORS_ORIGINS` (also used as trusted CSRF origins), and one stable `USER_KEYS_ENCRYPTION_KEY` in Vercel's project settings.
-2. Apply Django migrations (`python manage.py migrate`) as part of release before users sign up.
-3. Do **not** add provider API keys as shared Vercel variables. Each signed-in user saves their own keys under their account.
-4. If Daemons are unavailable for your Vercel account, deploy the same worker container on a separate always-on Python worker host with the same database and secrets.
-
-</details>
-
-<br>
-
-<a id="license"></a>
+id="license"></a>
 <p align="center"><img src="assets/h-license.svg" alt="License" width="100%"></p>
 
 This project is licensed under the [Apache License 2.0](LICENSE).
