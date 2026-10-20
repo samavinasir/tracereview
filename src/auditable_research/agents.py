@@ -4,12 +4,14 @@ import time
 from typing import Any, Literal, TypeVar, cast
 
 import httpx
+from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 from pydantic import BaseModel, Field
 
 from .config import settings
 from .models import ClaimVerification, EvidenceItem, ResearchPlan, SearchQuery, SourceRecord
-from .provider_credentials import provider_api_key
+from .provider_credentials import active_model_name, provider_api_key, selected_model_provider
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -194,29 +196,48 @@ class PromptBudgetExceeded(RuntimeError):
     """The provider says this individual request exceeds the configured token budget."""
 
 
-class GroqRateLimited(RuntimeError):
-    """Groq asked the caller to wait longer than the workflow's retry budget."""
+class ModelProviderRateLimited(RuntimeError):
+    """A model provider asked the caller to wait longer than the workflow's retry budget."""
 
     def __init__(self, model_name: str, retry_after_seconds: float | None) -> None:
         self.model_name = model_name
         self.retry_after_seconds = retry_after_seconds
-        super().__init__("Groq rate limit cooldown exceeds the configured wait budget")
+        super().__init__("Model provider rate limit cooldown exceeds the configured wait budget")
+
+
+GroqRateLimited = ModelProviderRateLimited
 
 
 def _structured_model(
     schema: type[BaseModel], model_name: str | None = None, max_completion_tokens: int | None = None
 ) -> Any:
-    groq_api_key = provider_api_key("groq_api_key")
-    if not groq_api_key:
-        raise RuntimeError("GROQ_API_KEY is required to run the research workflow")
-    model = ChatGroq(  # type: ignore[call-arg]
-        api_key=groq_api_key,
-        model=model_name or settings.groq_model,
-        temperature=0,
-        max_tokens=max_completion_tokens or settings.groq_max_completion_tokens,
-        reasoning_effort=settings.groq_reasoning_effort,
-    )
-    return model.with_structured_output(schema, include_raw=True)
+    provider = selected_model_provider()
+    resolved_model = active_model_name(model_name)
+    token_limit = max_completion_tokens or settings.groq_max_completion_tokens
+    if provider == "groq":
+        model = ChatGroq(
+            api_key=provider_api_key("groq_api_key"),
+            model=resolved_model,
+            temperature=0,
+            max_tokens=token_limit,
+            reasoning_effort=settings.groq_reasoning_effort,
+        )
+        return model.with_structured_output(schema, include_raw=True)
+    if provider == "anthropic":
+        model = ChatAnthropic(
+            api_key=provider_api_key("anthropic_api_key"),
+            model=resolved_model,
+            max_tokens=token_limit,
+        )
+        return model.with_structured_output(schema, method="json_schema", include_raw=True)
+    if provider == "gemini":
+        model = ChatGoogleGenerativeAI(
+            api_key=provider_api_key("gemini_api_key"),
+            model=resolved_model,
+            max_output_tokens=token_limit,
+        )
+        return model.with_structured_output(schema, method="json_schema", include_raw=True)
+    raise RuntimeError("Choose a supported AI model provider in API key settings")
 
 
 def _rate_limit_error(error: Exception) -> bool:
@@ -249,7 +270,8 @@ async def invoke_structured(
     max_retries: int | None = None,
     max_completion_tokens: int | None = None,
 ) -> tuple[T, dict]:
-    model_name = model_name or settings.groq_model
+    provider = selected_model_provider()
+    model_name = active_model_name(model_name)
     model = _structured_model(schema, model_name, max_completion_tokens) if max_completion_tokens else _structured_model(schema, model_name)
     response = None
     retry_limit = settings.groq_max_retries if max_retries is None else max_retries
@@ -281,11 +303,13 @@ async def invoke_structured(
                 delay = min(settings.groq_retry_base_seconds * (2**attempt), wait_limit)
             await asyncio.sleep(delay)
     if response is None:
-        raise RuntimeError("Groq request failed after retry handling")
+        raise RuntimeError("Model provider request failed after retry handling")
     parsed = response.get("parsed")
     if parsed is None:
         parse_error = response.get("parsing_error")
-        raise RuntimeError(f"Groq structured response could not be parsed: {type(parse_error).__name__ if parse_error else 'missing parsed value'}")
+        raise RuntimeError(f"{provider.title()} structured response could not be parsed: {type(parse_error).__name__ if parse_error else 'missing parsed value'}")
+    if isinstance(parsed, dict):
+        parsed = schema.model_validate(parsed)
     raw = response.get("raw")
     usage = getattr(raw, "usage_metadata", None) or getattr(raw, "response_metadata", {}).get("token_usage", {})
     usage = usage or {}
@@ -295,7 +319,7 @@ async def invoke_structured(
     if actual_total is None and input_tokens is not None and output_tokens is not None:
         actual_total = input_tokens + output_tokens
     await _groq_bucket.reconcile(reserved_tokens, actual_total)
-    return parsed, {"input_tokens": input_tokens, "output_tokens": output_tokens, "total_tokens": actual_total, "model": model_name}
+    return parsed, {"input_tokens": input_tokens, "output_tokens": output_tokens, "total_tokens": actual_total, "model": model_name, "provider": provider}
 
 
 async def invoke_openrouter_structured(

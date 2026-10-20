@@ -254,6 +254,14 @@ a, .external-link, .source-link, .citation, .marketing-use-cases>a,
 .api-key-field>label:first-child { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--ink); font-size: 12px; font-weight: 650; }
 .api-key-field>input { min-height: 42px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: #fff; color: var(--ink); font: 400 13px Inter, Arial, sans-serif; }
 .required-label { color: var(--sage); font-size: 10px; font-weight: 500; }
+.optional-label { color: var(--muted); font-size: 10px; font-weight: 500; }
+.api-key-guidance { margin: 18px 0 22px; padding: 13px 15px; border: 1px solid #d7e4dc; border-radius: 10px; background: #edf3ed; color: var(--ink); font: 400 12px/1.6 Inter, Arial, sans-serif; }
+.api-key-guidance strong { color: var(--forest); }
+.api-key-section-title { margin: 24px 0 8px; color: var(--forest); font: 650 14px Inter, Arial, sans-serif; }
+.api-key-section-title span { color: var(--muted); font-size: 11px; font-weight: 450; }
+.model-provider-preference { display: grid; gap: 7px; margin: 14px 0 20px; color: var(--ink); font: 600 12px Inter, Arial, sans-serif; }
+.model-provider-preference select { min-height: 42px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 9px; background: #fff; color: var(--ink); font: 400 13px Inter, Arial, sans-serif; }
+.api-key-optional-note { margin: 0 0 12px; color: var(--muted); font: 400 12px/1.6 "Source Serif 4", Georgia, serif; }
 .key-clear { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
 .account-message { margin: 13px 0; padding: 11px 13px; border: 1px solid #d7e4dc; border-radius: 9px; background: #edf2ec; color: var(--forest); font-size: 12px; line-height: 1.5; }
 .account-message.error { border-color: #f2cbc6; background: #fff1ef; color: #a43d33; }

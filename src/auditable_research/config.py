@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=_REPO_ROOT / ".env", extra="ignore")
 
     groq_api_key: str = ""
+    anthropic_api_key: str = ""
+    gemini_api_key: str = ""
     openrouter_api_key: str = ""
     openrouter_fallback_model: str = "openrouter/free"
     ncbi_api_key: str = ""
@@ -18,6 +20,10 @@ class Settings(BaseSettings):
     groq_model: str = "openai/gpt-oss-120b"
     groq_fallback_model: str = "openai/gpt-oss-20b"
     groq_screening_model: str = "openai/gpt-oss-20b"
+    anthropic_model: str = "claude-sonnet-5"
+    anthropic_fallback_model: str = "claude-haiku-4-5-20251001"
+    gemini_model: str = "gemini-3.8-flash"
+    gemini_fallback_model: str = "gemini-3.5-flash-lite"
     database_url: str
     django_secret_key: str = "development-only-key-change-before-deployment"
     user_keys_encryption_key: str = ""

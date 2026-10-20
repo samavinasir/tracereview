@@ -17,31 +17,39 @@ function readOptions() {
   };
 }
 
-function showSearchError(message, needsAccount = false) {
+function showSearchError(message, action = null) {
   errorBox.replaceChildren();
 
   const copy = document.createElement("p");
   copy.className = "marketing-search-error-copy";
-  copy.textContent = needsAccount
+  copy.textContent = action === "account"
     ? "Create an account or sign in to start your research."
     : message;
   errorBox.append(copy);
 
-  if (needsAccount) {
+  if (action) {
     const actions = document.createElement("div");
     actions.className = "marketing-search-error-actions";
 
-    const signup = document.createElement("a");
-    signup.href = "/accounts/signup/";
-    signup.className = "marketing-search-error-primary";
-    signup.textContent = "Create account";
+    if (action === "account") {
+      const signup = document.createElement("a");
+      signup.href = "/accounts/signup/";
+      signup.className = "marketing-search-error-primary";
+      signup.textContent = "Create account";
 
-    const login = document.createElement("a");
-    login.href = "/accounts/login/";
-    login.className = "marketing-search-error-secondary";
-    login.textContent = "Sign in";
+      const login = document.createElement("a");
+      login.href = "/accounts/login/";
+      login.className = "marketing-search-error-secondary";
+      login.textContent = "Sign in";
+      actions.append(signup, login);
+    } else if (action === "api-keys") {
+      const apiKeys = document.createElement("a");
+      apiKeys.href = "/settings/api-keys/";
+      apiKeys.className = "marketing-search-error-primary";
+      apiKeys.textContent = "Go to API key settings";
+      actions.append(apiKeys);
+    }
 
-    actions.append(signup, login);
     errorBox.append(actions);
   }
 
@@ -63,7 +71,13 @@ form.addEventListener("submit", async (event) => {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       if (response.status === 401) {
-        showSearchError(data.detail, true);
+        showSearchError(data.detail, "account");
+        submitButton.disabled = false;
+        submitButton.innerHTML = 'Search papers <span aria-hidden="true">↗</span>';
+        return;
+      }
+      if (data.code === "missing_required_api_key") {
+        showSearchError(data.detail, "api-keys");
         submitButton.disabled = false;
         submitButton.innerHTML = 'Search papers <span aria-hidden="true">↗</span>';
         return;

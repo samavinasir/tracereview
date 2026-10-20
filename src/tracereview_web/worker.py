@@ -8,7 +8,7 @@ import uuid
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tracereview_web.settings")
 
-from auditable_research.provider_credentials import decrypt_provider_keys
+from auditable_research.provider_credentials import MODEL_PROVIDER_PREFERENCE_KEY, decrypt_provider_keys
 from auditable_research.storage import (
     claim_research_job,
     engine,
@@ -36,7 +36,10 @@ async def _provider_keys(user_id: int | None) -> dict[str, str] | None:
     from tracereview_web.research.models import UserProviderCredentials
 
     row = await UserProviderCredentials.objects.filter(user_id=user_id).afirst()
-    return decrypt_provider_keys(row.encrypted_keys if row else None)
+    keys = decrypt_provider_keys(row.encrypted_keys if row else None)
+    if row:
+        keys[MODEL_PROVIDER_PREFERENCE_KEY] = row.preferred_model_provider
+    return keys
 
 
 async def _process(job: dict, worker_id: str) -> None:

@@ -33,6 +33,7 @@ class ResearchRunOwner(models.Model):
 class UserProviderCredentials(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="provider_credentials")
     encrypted_keys = models.JSONField(default=dict)
+    preferred_model_provider = models.CharField(max_length=20, default="auto")
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:

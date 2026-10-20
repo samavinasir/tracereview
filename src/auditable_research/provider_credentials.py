@@ -13,7 +13,25 @@ PROVIDER_KEY_FIELDS = {
     "openrouter_api_key": "OPENROUTER_API_KEY",
     "ncbi_api_key": "NCBI_API_KEY",
     "semantic_scholar_api_key": "SEMANTIC_SCHOLAR_API_KEY",
+    "anthropic_api_key": "ANTHROPIC_API_KEY",
+    "gemini_api_key": "GEMINI_API_KEY",
 }
+
+PROVIDER_KEY_LABELS = {
+    "groq_api_key": "Groq API key",
+    "openrouter_api_key": "OpenRouter API key",
+    "ncbi_api_key": "NCBI API key",
+    "semantic_scholar_api_key": "Semantic Scholar API key",
+    "anthropic_api_key": "Anthropic API key (Claude)",
+    "gemini_api_key": "Gemini API key",
+}
+MODEL_PROVIDER_KEYS = {
+    "groq": "groq_api_key",
+    "anthropic": "anthropic_api_key",
+    "gemini": "gemini_api_key",
+}
+MODEL_PROVIDER_LABELS = {"auto": "Automatic", "groq": "Groq", "anthropic": "Claude", "gemini": "Gemini"}
+MODEL_PROVIDER_PREFERENCE_KEY = "_preferred_model_provider"
 
 _workflow_keys: ContextVar[dict[str, str] | None] = ContextVar("workflow_provider_keys", default=None)
 
@@ -62,6 +80,33 @@ def provider_api_key(name: str) -> str:
     if keys is not None:
         return keys.get(name, "")
     return str(getattr(settings, name, ""))
+
+
+def selected_model_provider() -> str:
+    """Return the user's selected configured model provider, or the first available one."""
+    keys = _workflow_keys.get()
+    preferred = keys.get(MODEL_PROVIDER_PREFERENCE_KEY, "auto") if keys is not None else "auto"
+    if preferred in MODEL_PROVIDER_KEYS and provider_api_key(MODEL_PROVIDER_KEYS[preferred]):
+        return preferred
+    for provider in ("anthropic", "gemini", "groq"):
+        if provider_api_key(MODEL_PROVIDER_KEYS[provider]):
+            return provider
+    raise RuntimeError("No model provider API key is configured for this research run")
+
+
+def active_model_name(requested_model: str | None = None) -> str:
+    """Resolve the configured model name for the active provider and workflow role."""
+    provider = selected_model_provider()
+    if provider == "groq":
+        return requested_model or settings.groq_model
+    is_fallback = requested_model in {settings.groq_fallback_model, settings.groq_screening_model}
+    if provider == "anthropic":
+        if requested_model in {settings.anthropic_model, settings.anthropic_fallback_model}:
+            return requested_model
+        return settings.anthropic_fallback_model if is_fallback else settings.anthropic_model
+    if requested_model in {settings.gemini_model, settings.gemini_fallback_model}:
+        return requested_model
+    return settings.gemini_fallback_model if is_fallback else settings.gemini_model
 
 
 @contextmanager

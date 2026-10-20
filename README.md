@@ -26,8 +26,8 @@ AI summaries and retrieval notes are reading aids and may miss nuance. Read the 
 | --- | --- |
 | Web app | Django 5, server-rendered HTML templates, CSS, browser JavaScript |
 | Existing API compatibility | FastAPI, Pydantic Settings, Uvicorn |
-| Workflow | LangGraph; LangChain's Groq integration for model access |
-| Language models | Groq GPT-OSS by default; optional OpenRouter free-router fallback |
+| Workflow | LangGraph; LangChain integrations for Groq, Anthropic Claude, and Google Gemini |
+| Language models | User-selected Groq, Claude, or Gemini; optional OpenRouter paper-summary fallback |
 | Research sources | PubMed/NCBI, Europe PMC, OpenAlex, Semantic Scholar, Crossref; UniProt adapter available |
 | Database | PostgreSQL 16, SQLAlchemy asyncio, asyncpg |
 | CI | GitHub Actions for lint, typing, and tests |
@@ -48,7 +48,7 @@ Application configuration is read from environment variables (normally in `.env`
 
 - `GROQ_MODEL`, `GROQ_REASONING_EFFORT`, and `GROQ_TPM_BUDGET` for model behavior.
 - `USER_KEYS_ENCRYPTION_KEY` to encrypt provider API keys saved by individual accounts. Generate one with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. Keep this value private and stable: changing it makes existing saved keys unreadable.
-- The legacy FastAPI compatibility server can still use `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `NCBI_API_KEY`, `CONTACT_EMAIL`, and `SEMANTIC_SCHOLAR_API_KEY` from its environment; the Django interface uses the signed-in user's saved keys instead.
+- The legacy FastAPI compatibility server can use model-provider keys (`GROQ_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY`) and optional `OPENROUTER_API_KEY`, `NCBI_API_KEY`, `CONTACT_EMAIL`, and `SEMANTIC_SCHOLAR_API_KEY` values from its environment; the Django interface uses the signed-in user's saved keys instead.
 - `MAX_RECORDS_PER_RESEARCH_RUN`, `MAX_PAPERS_PER_REVIEW`, `MIN_ABSTRACT_CHARS`, and `PAPER_DIGEST_BATCH_SIZE` for retrieval and review limits.
 - `DATABASE_URL` for local PostgreSQL access.
 - `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, and `DJANGO_ALLOWED_HOSTS` for Django. Set a private random secret and `DJANGO_DEBUG=false` in production.
@@ -59,7 +59,7 @@ Never commit `.env` or put provider credentials in screenshots, logs, or public 
 
 A run plans search queries, retrieves and deduplicates source records, selects a small paper set, digests selected papers in batches, and builds a compact list of authors' abstract conclusions. It can expand retrieval once when too few cards are available, but it does not broaden the search just because a model failed to summarize records. Successful summaries are cached; failed summaries remain visibly unreviewed and do not become scientific findings. Runs are marked complete when at least one paper card is ready and failed when there are no cards to show.
 
-Search requests use bounded concurrency; PubMed calls are paced separately. Groq digest calls use a process-local concurrency limit and token budget. Long provider cooldowns are not retried in a loop. If configured, OpenRouter is tried once as a fallback. If both providers fail, the run records the issue and continues to its final report with whatever cards are available.
+Search requests use bounded concurrency; PubMed calls are paced separately. Model calls use a process-local concurrency limit and token budget. Long provider cooldowns are not retried in a loop. If configured, OpenRouter is tried once as a paper-summary fallback. If both providers fail, the run records the issue and continues to its final report with whatever cards are available.
 
 Retrieved titles, abstracts, and other provider fields are untrusted source data. They are displayed as text and are not treated as instructions.
 
@@ -94,7 +94,7 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-Create an account from the home page, then open **API keys** and save a Groq key (required to run research). OpenRouter, NCBI, and Semantic Scholar keys are optional. Each user's runs are private to that account.
+Create an account from the home page, then open **API keys** and save at least one model-provider key (Groq, Claude, or Gemini). Choose the preferred provider there, or use Automatic, which selects Claude first, then Gemini, then Groq. OpenRouter, NCBI, and Semantic Scholar keys are optional. Each user's runs are private to that account.
 
 Run the Django ASGI web app in one terminal:
 
