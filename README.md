@@ -162,7 +162,7 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 
 <br>
 
-id="license"></a>
+<a id="license"></a>
 <p align="center"><img src="assets/h-license.svg" alt="License" width="100%"></p>
 
 This project is licensed under the [Apache License 2.0](LICENSE).
