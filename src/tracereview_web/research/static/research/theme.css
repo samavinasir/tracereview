@@ -265,6 +265,17 @@ a, .external-link, .source-link, .citation, .marketing-use-cases>a,
 .key-clear { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
 .account-message { margin: 13px 0; padding: 11px 13px; border: 1px solid #d7e4dc; border-radius: 9px; background: #edf2ec; color: var(--forest); font-size: 12px; line-height: 1.5; }
 .account-message.error { border-color: #f2cbc6; background: #fff1ef; color: #a43d33; }
+
+/* Keep the requested Inter + Source Serif 4 pair consistent across the app. */
+html, body { font-family: Inter, Arial, sans-serif; }
+p, blockquote, dd, li { font-family: "Source Serif 4", Georgia, serif; }
+h1, h2, h3, h4, h5, h6, .brand, .marketing-brand, .account-brand { font-family: Inter, Arial, sans-serif !important; }
+.home-page p { font-family: "Source Serif 4", Georgia, serif; }
+.home-page h1, .home-page h2, .home-page h3 { font-family: Inter, Arial, sans-serif; }
+.home-page .composer-hint, .home-page .quick-actions>span, .home-page .home-trust,
+.home-page .search-options summary { font-family: Inter, Arial, sans-serif; }
+.account-card h1 { font-family: Inter, Arial, sans-serif; }
+.account-card>p:not(.eyebrow):not(.account-footnote).api-key-optional-note { font: 400 12px/1.6 "Source Serif 4", Georgia, serif; }
 @media(max-width:700px) {
   .workspace-topbar { height: auto; min-height: 64px; flex-wrap: wrap; gap: 7px; padding: 8px 14px; }
   .workspace-global-nav { order: 3; flex-basis: 100%; margin: 0; }

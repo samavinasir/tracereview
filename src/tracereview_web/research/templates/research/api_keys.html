@@ -5,6 +5,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Your API keys · TraceReview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'research/style.css' %}">
   <link rel="stylesheet" href="{% static 'research/theme.css' %}">
 </head>
@@ -14,7 +17,7 @@
     <p class="eyebrow">ACCOUNT SETTINGS</p>
     <h1>Your provider keys</h1>
     <p>Keys are encrypted before being saved. Each research run uses only the keys on your account. TraceReview does not display saved key values.</p>
-    <div class="api-key-guidance"><strong>Required:</strong> Add at least one AI provider key (Groq, Claude, or Gemini) to run research. <strong>Optional:</strong> Add source or fallback keys if you have them.</div>
+    <div class="api-key-guidance"><strong>Required:</strong> Add at least one AI provider key (Groq, Claude, or Gemini) and your NCBI API key to run research with PubMed search. <strong>Optional:</strong> Add other source or fallback keys if you have them.</div>
     {% for message in messages %}<div class="account-message {{ message.tags }}">{{ message }}</div>{% endfor %}
     {% if not encryption_ready %}<div class="account-message error">The site administrator must configure secure key storage before users can save keys.</div>{% endif %}
     <form method="post">
@@ -23,19 +26,27 @@
       <label class="model-provider-preference" for="preferred-model-provider">Preferred provider
         <select id="preferred-model-provider" name="preferred_model_provider">
           {% for provider, label in model_provider_choices.items %}
-            <option value="{{ provider }}" {% if preferred_model_provider == provider %}selected{% endif %}>{{ label }}{% if provider == "auto" %} — Claude, then Gemini, then Groq{% endif %}</option>
+          <option value="{{ provider }}" {% if preferred_model_provider == provider %}selected{% endif %}>{{ label }}{% if provider == "auto" %} (Claude, then Gemini, then Groq){% endif %}</option>
           {% endfor %}
         </select>
       </label>
-      {% for field, label in required_key_fields.items %}
+      {% for field, label in required_model_key_fields.items %}
         <div class="api-key-field">
           <label for="{{ field }}">{{ label }} <span class="required-label">One provider key required</span></label>
           <input id="{{ field }}" name="{{ field }}" type="password" autocomplete="new-password" placeholder="{% if field in configured_keys %}Saved — leave blank to keep current key{% else %}Paste your {{ label }}{% endif %}" {% if not encryption_ready %}disabled{% endif %}>
           {% if field in configured_keys %}<label class="key-clear"><input type="checkbox" name="clear_{{ field }}"> Remove saved key</label>{% endif %}
         </div>
       {% endfor %}
+      <h2 class="api-key-section-title">Required search key</h2>
+      {% for field, label in required_search_key_fields.items %}
+        <div class="api-key-field">
+          <label for="{{ field }}">{{ label }} <span class="required-label">Required for PubMed search</span></label>
+          <input id="{{ field }}" name="{{ field }}" type="password" autocomplete="new-password" placeholder="{% if field in configured_keys %}Saved — leave blank to keep current key{% else %}Paste your {{ label }}{% endif %}" {% if not encryption_ready %}disabled{% endif %}>
+          {% if field in configured_keys %}<label class="key-clear"><input type="checkbox" name="clear_{{ field }}"> Remove saved key</label>{% endif %}
+        </div>
+      {% endfor %}
       <h2 class="api-key-section-title">Optional provider keys</h2>
-      <p class="api-key-optional-note">Claude and Gemini keys can run the complete research workflow when selected above. OpenRouter can provide a paper-summary fallback; NCBI and Semantic Scholar keys support their respective search sources.</p>
+      <p class="api-key-optional-note">Claude and Gemini keys can run the complete research workflow when selected above. OpenRouter can provide a paper-summary fallback, and a Semantic Scholar key can improve access to its search source.</p>
       {% for field, label in optional_key_fields.items %}
         <div class="api-key-field">
           <label for="{{ field }}">{{ label }} <span class="optional-label">Optional</span></label>

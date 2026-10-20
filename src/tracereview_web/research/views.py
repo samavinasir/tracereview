@@ -117,13 +117,16 @@ def api_keys(request: HttpRequest) -> HttpResponse:
         return redirect("api_keys")
 
     return render(request, "research/api_keys.html", {
-        "required_key_fields": {
+        "required_model_key_fields": {
             field: PROVIDER_KEY_LABELS[field]
             for field in ("groq_api_key", "anthropic_api_key", "gemini_api_key")
         },
+        "required_search_key_fields": {
+            "ncbi_api_key": PROVIDER_KEY_LABELS["ncbi_api_key"],
+        },
         "optional_key_fields": {
             field: PROVIDER_KEY_LABELS[field] for field in PROVIDER_KEY_FIELDS
-            if field not in {"groq_api_key", "anthropic_api_key", "gemini_api_key"}
+            if field not in {"groq_api_key", "anthropic_api_key", "gemini_api_key", "ncbi_api_key"}
         },
         "model_provider_choices": MODEL_PROVIDER_LABELS,
         "preferred_model_provider": row.preferred_model_provider,
@@ -175,6 +178,11 @@ async def start_research(request: HttpRequest) -> JsonResponse:
         return JsonResponse({
             "code": "missing_required_api_key",
             "detail": "Add at least one AI provider key in API key settings before starting research.",
+        }, status=400)
+    if not user_keys.get("ncbi_api_key"):
+        return JsonResponse({
+            "code": "missing_required_api_key",
+            "detail": "Add your NCBI API key in API key settings to enable PubMed search for this research run.",
         }, status=400)
     try:
         payload = json.loads(request.body)
