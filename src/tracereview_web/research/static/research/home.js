@@ -17,6 +17,37 @@ function readOptions() {
   };
 }
 
+function showSearchError(message, needsAccount = false) {
+  errorBox.replaceChildren();
+
+  const copy = document.createElement("p");
+  copy.className = "marketing-search-error-copy";
+  copy.textContent = needsAccount
+    ? "Create an account or sign in to start your research."
+    : message;
+  errorBox.append(copy);
+
+  if (needsAccount) {
+    const actions = document.createElement("div");
+    actions.className = "marketing-search-error-actions";
+
+    const signup = document.createElement("a");
+    signup.href = "/accounts/signup/";
+    signup.className = "marketing-search-error-primary";
+    signup.textContent = "Create account";
+
+    const login = document.createElement("a");
+    login.href = "/accounts/login/";
+    login.className = "marketing-search-error-secondary";
+    login.textContent = "Sign in";
+
+    actions.append(signup, login);
+    errorBox.append(actions);
+  }
+
+  errorBox.hidden = false;
+}
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!form.reportValidity()) return;
@@ -30,17 +61,24 @@ form.addEventListener("submit", async (event) => {
       body: JSON.stringify({ question: questionInput.value.trim(), options: readOptions() }),
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.detail || `Could not start research (${response.status})`);
+    if (!response.ok) {
+      if (response.status === 401) {
+        showSearchError(data.detail, true);
+        submitButton.disabled = false;
+        submitButton.innerHTML = 'Search papers <span aria-hidden="true">↗</span>';
+        return;
+      }
+      throw new Error(data.detail || `Could not start research (${response.status})`);
+    }
     window.location.assign(`${data.result_url}/results`);
   } catch (error) {
-    errorBox.textContent = error.message || String(error);
-    errorBox.hidden = false;
+    showSearchError(error.message || String(error));
     submitButton.disabled = false;
     submitButton.innerHTML = 'Search papers <span aria-hidden="true">↗</span>';
   }
 });
 
-questionInput.addEventListener("input", () => { errorBox.textContent = ""; errorBox.hidden = true; });
+questionInput.addEventListener("input", () => { errorBox.replaceChildren(); errorBox.hidden = true; });
 document.querySelector("#get-started").addEventListener("click", () => {
   form.scrollIntoView({ behavior: "smooth", block: "center" });
   questionInput.focus({ preventScroll: true });
