@@ -33,7 +33,7 @@
       {% for field, label in required_model_key_fields.items %}
         <div class="api-key-field">
           <label for="{{ field }}">{{ label }} <span class="required-label">One provider key required</span></label>
-          <input id="{{ field }}" name="{{ field }}" type="password" autocomplete="new-password" placeholder="{% if field in configured_keys %}Saved — leave blank to keep current key{% else %}Paste your {{ label }}{% endif %}" {% if not encryption_ready %}disabled{% endif %}>
+          <input id="{{ field }}" name="{{ field }}" type="password" autocomplete="new-password" placeholder="{% if field in configured_keys %}Saved. Leave blank to keep current key{% else %}Paste your {{ label }}{% endif %}" {% if not encryption_ready %}disabled{% endif %}>
           {% if field in configured_keys %}<label class="key-clear"><input type="checkbox" name="clear_{{ field }}"> Remove saved key</label>{% endif %}
         </div>
       {% endfor %}
@@ -41,7 +41,7 @@
       {% for field, label in required_search_key_fields.items %}
         <div class="api-key-field">
           <label for="{{ field }}">{{ label }} <span class="required-label">Required for PubMed search</span></label>
-          <input id="{{ field }}" name="{{ field }}" type="password" autocomplete="new-password" placeholder="{% if field in configured_keys %}Saved — leave blank to keep current key{% else %}Paste your {{ label }}{% endif %}" {% if not encryption_ready %}disabled{% endif %}>
+          <input id="{{ field }}" name="{{ field }}" type="password" autocomplete="new-password" placeholder="{% if field in configured_keys %}Saved. Leave blank to keep current key{% else %}Paste your {{ label }}{% endif %}" {% if not encryption_ready %}disabled{% endif %}>
           {% if field in configured_keys %}<label class="key-clear"><input type="checkbox" name="clear_{{ field }}"> Remove saved key</label>{% endif %}
         </div>
       {% endfor %}
@@ -50,7 +50,7 @@
       {% for field, label in optional_key_fields.items %}
         <div class="api-key-field">
           <label for="{{ field }}">{{ label }} <span class="optional-label">Optional</span></label>
-          <input id="{{ field }}" name="{{ field }}" type="password" autocomplete="new-password" placeholder="{% if field in configured_keys %}Saved — leave blank to keep current key{% else %}Paste your {{ label }}{% endif %}" {% if not encryption_ready %}disabled{% endif %}>
+          <input id="{{ field }}" name="{{ field }}" type="password" autocomplete="new-password" placeholder="{% if field in configured_keys %}Saved. Leave blank to keep current key{% else %}Paste your {{ label }}{% endif %}" {% if not encryption_ready %}disabled{% endif %}>
           {% if field in configured_keys %}<label class="key-clear"><input type="checkbox" name="clear_{{ field }}"> Remove saved key</label>{% endif %}
         </div>
       {% endfor %}

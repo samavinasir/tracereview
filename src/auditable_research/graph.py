@@ -496,7 +496,7 @@ def _paper_executive_summary(papers: list[dict]) -> str:
         first_author = authors[0].split()[-1] if authors else "Author unavailable"
         author_text = f"{first_author} et al." if authors and len(authors) > 1 else first_author
         conclusion = digest.get("authors_conclusion") or "No final abstract sentence available."
-        lines.append(f"[{paper['reference_number']}] {source.get('publication_year') or 'Year unavailable'} · {author_text} — “{conclusion}”")
+        lines.append(f"[{paper['reference_number']}] {source.get('publication_year') or 'Year unavailable'} · {author_text}: “{conclusion}”")
     return "\n".join(lines)
 
 

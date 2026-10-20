@@ -65,13 +65,13 @@ Retrieved titles, abstracts, and other provider fields are untrusted source data
 
 ## API overview
 
-- `GET /health` — API health.
-- `POST /research` — start a run; returns a run ID immediately.
-- `GET /research/{id}` and `GET /research/{id}/status` — run status and progress.
-- `GET /research/{id}/plan` — objective and search plan.
-- `GET /research/{id}/sources` — retrieved records and attached paper summaries.
-- `GET /research/{id}/report` — report JSON; use `?format=markdown` for a Markdown download.
-- `GET /research/{id}/audit` — structured workflow events and provider/model diagnostics.
+- `GET /health`: API health.
+- `POST /research`: start a run; returns a run ID immediately.
+- `GET /research/{id}` and `GET /research/{id}/status`: run status and progress.
+- `GET /research/{id}/plan`: objective and search plan.
+- `GET /research/{id}/sources`: retrieved records and attached paper summaries.
+- `GET /research/{id}/report`: report JSON; use `?format=markdown` for a Markdown download.
+- `GET /research/{id}/audit`: structured workflow events and provider/model diagnostics.
 
 Legacy evidence and claims endpoints remain for compatibility with older stored runs. New research runs use paper cards and do not generate or verify claims.
 

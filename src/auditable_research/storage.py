@@ -544,7 +544,7 @@ def _report_markdown(report: dict) -> str:
         for paper in report.get("papers", []):
             source, digest = paper.get("source", {}), paper.get("digest", {})
             authors = ", ".join(source.get("authors", []))
-            lines.extend([f"### [{paper.get('reference_number')}] {source.get('title', '')}", f"{authors} ({source.get('publication_year') or 'Year unavailable'}). [{source.get('provider', '')}]({source.get('url', '')})", "", f"**What this study did — AI summary of the abstract:** {digest.get('what_study_did', '')}", f"**Study type:** {digest.get('study_type', 'unclear')}", f"**Why it matches — retrieval note:** {digest.get('why_it_matches', '')}", "", "**Key finding excerpts (verbatim, checked against source text):**"])
+            lines.extend([f"### [{paper.get('reference_number')}] {source.get('title', '')}", f"{authors} ({source.get('publication_year') or 'Year unavailable'}). [{source.get('provider', '')}]({source.get('url', '')})", "", f"**What this study did: AI summary of the abstract:** {digest.get('what_study_did', '')}", f"**Study type:** {digest.get('study_type', 'unclear')}", f"**Why it matches: retrieval note:** {digest.get('why_it_matches', '')}", "", "**Key finding excerpts (verbatim, checked against source text):**"])
             lines.extend([f"> {quote.get('text', '')} ({quote.get('source_part', '')})" for quote in digest.get("key_findings", [])] or ["No verbatim finding quote was validated."])
             if digest.get("authors_conclusion"):
                 lines.extend(["", "**Abstract's final sentence (verbatim; read in context):**", f"> {digest['authors_conclusion']}"])
@@ -569,7 +569,7 @@ def _report_markdown(report: dict) -> str:
         lines.extend([f"### {section.get('subquestion', '')}", section.get("text", ""), ""])
     lines.extend(["## Evidence Assessment"])
     for item in report.get("evidence_assessment", []):
-        lines.extend([f"- **{item.get('claim_id')} — {item.get('verification')}:** {item.get('claim')}", f"  - Evidence: {', '.join(item.get('evidence_ids', []))}; sources: {', '.join(item.get('source_ids', []))}; level: {', '.join(item.get('evidence_level', []))}; source part: {', '.join(item.get('source_parts', []))}"])
+        lines.extend([f"- **{item.get('claim_id')}: {item.get('verification')}:** {item.get('claim')}", f"  - Evidence: {', '.join(item.get('evidence_ids', []))}; sources: {', '.join(item.get('source_ids', []))}; level: {', '.join(item.get('evidence_level', []))}; source part: {', '.join(item.get('source_parts', []))}"])
     conflicts = [f"- {item}" for item in report.get("conflicting_evidence", [])] or ["- None identified."]
     gaps = [f"- {item}" for item in report.get("research_gaps", [])] or ["- None identified."]
     lines.extend(["", "## Conflicting Evidence", *conflicts, "", "## Research Gaps", *gaps, "", "## References"])
