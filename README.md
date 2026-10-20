@@ -15,16 +15,6 @@
   <img alt="Vercel" src="https://img.shields.io/badge/Vercel-26342E?style=flat-square&logo=vercel&logoColor=FCFCFA">
 </p>
 
-<p align="center">
-  <a href="#features">Features</a> &nbsp;·&nbsp;
-  <a href="#workflow">Workflow</a> &nbsp;·&nbsp;
-  <a href="#tech-stack">Tech stack</a> &nbsp;·&nbsp;
-  <a href="#run-locally">Run locally</a> &nbsp;·&nbsp;
-  <a href="#configuration">Configuration</a> &nbsp;·&nbsp;
-  <a href="#api-overview">API</a> &nbsp;·&nbsp;
-  <a href="#production-notes">Production</a>
-</p>
-
 <br>
 
 **TraceReview** helps researchers find a focused set of papers and read what each source says. Enter a research question to retrieve and rank records, then review paper cards with bibliographic details, a short AI-generated study summary, checked verbatim excerpts, and the abstract's final sentence copied from the source record.
