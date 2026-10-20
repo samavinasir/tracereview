@@ -40,7 +40,10 @@ database_query = dict(database_url.query)
 sslmode = database_query.pop("sslmode", None)
 if sslmode is not None:
     database_query.setdefault("ssl", sslmode)
-    database_url = database_url.set(query=database_query)
+# Neon/libpq connection strings may include this option, but asyncpg has no
+# channel_binding connect argument. TLS remains enabled through the `ssl` option.
+database_query.pop("channel_binding", None)
+database_url = database_url.set(query=database_query)
 
 engine = create_async_engine(database_url, pool_pre_ping=True)
 Session = async_sessionmaker(engine, expire_on_commit=False)
