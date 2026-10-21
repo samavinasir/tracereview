@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { Activity, BookOpen, CircleAlert, Download, FileSearch, GitBranch, Search, type LucideIcon } from "lucide-react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 const API = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 const API_LABEL = new URL(API, window.location.origin).host;
@@ -138,6 +139,7 @@ export default function App() {
         {tab === "audit" && <section className="panel"><PanelTitle eyebrow="OBSERVABILITY" title="Research run trace" /><p className="muted">Structured execution trace. No chain-of-thought is stored.</p><div className="timeline">{audit.map((event) => <article className="timeline-event" key={event.event_id}><span className="timeline-marker" /><div className="timeline-header"><div><strong>{event.node}</strong><span>{event.action}</span></div><time>{new Date(event.timestamp).toLocaleString()}</time></div><div className="event-metrics">{event.latency_ms != null && <span>{Math.round(event.latency_ms)} ms</span>}{event.prompt_tokens != null && <span>{event.prompt_tokens} input tokens</span>}{event.completion_tokens != null && <span>{event.completion_tokens} output tokens</span>}</div><details><summary>Event details</summary><pre>{JSON.stringify(event.details, null, 2)}</pre><div className="event-refs"><span>In: {event.input_refs?.join(", ") || "None"}</span><span>Out: {event.output_refs?.slice(0, 12).join(", ") || "None"}</span></div></details></article>)}</div>{audit.length === 0 && <Empty loading={status === "running" || status === "queued"} text="Events will appear as the workflow progresses." />}</section>}
       </>}
     </main><footer>TraceReview <span>·</span> Paper summaries with source wording for researchers to interpret.</footer>
+    <SpeedInsights />
   </div>;
 }
 
